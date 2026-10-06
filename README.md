@@ -59,7 +59,9 @@ From a script: `BrowserSelector.exe --register` and `BrowserSelector.exe --unreg
 | `Esc` | Close without opening anything |
 
 Choose the entry that `Enter` opens in **Settings → General → Quick choice**. The **Try it** box there
-shows the picker for any link without changing anything in Windows.
+tests any link without changing anything in Windows: **Open picker** always asks, and
+**Open like a link** does what a real click would (follows your site rules, or asks) and tells you
+which rule matched.
 
 ## Site rules
 

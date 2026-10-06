@@ -73,14 +73,12 @@
                         <StackPanel>
                             <TextBlock Text="{local:Tr Gen.Try}" Style="{StaticResource Header}" />
                             <TextBlock Text="{local:Tr Gen.TryHint}" Style="{StaticResource MutedText}" Margin="0,0,0,10" />
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBox x:Name="TryBox" Text="https://github.com/Mohammad-Diab/Browser-Selector" FlowDirection="LeftToRight" />
-                                <Button Grid.Column="1" Content="{local:Tr Gen.TryButton}" Click="Try_Click" Margin="8,0,0,0" />
-                            </Grid>
+                            <TextBox x:Name="TryBox" Text="https://github.com/Mohammad-Diab/Browser-Selector" FlowDirection="LeftToRight" />
+                            <WrapPanel Margin="0,8,0,0">
+                                <Button Content="{local:Tr Gen.TryButton}" Click="Try_Click" Margin="0,0,8,4" />
+                                <Button Content="{local:Tr Gen.TryRules}" Click="TryRules_Click" Margin="0,0,8,4" />
+                            </WrapPanel>
+                            <TextBlock x:Name="TryResult" Style="{StaticResource MutedText}" Margin="0,6,0,0" Visibility="Collapsed" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

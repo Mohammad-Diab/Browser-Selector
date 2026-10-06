@@ -180,14 +180,47 @@ namespace BrowserSelector
             Close();
         }
 
+        bool TryLink(out string link)
+        {
+            TryResult.Visibility = Visibility.Collapsed;
+            if (Launcher.TryNormalize(TryBox.Text, out link)) return true;
+            MessageBox.Show(this, Loc.F("Error.BadLink", TryBox.Text), Loc.T("Error.Title"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+
         void Try_Click(object sender, RoutedEventArgs e)
         {
-            if (!Launcher.TryNormalize(TryBox.Text, out var link))
+            if (TryLink(out var link)) new PickerWindow(link, browsers, AppSettings.Load()).Show();
+        }
+
+        /// <summary>Does what clicking the link would do: follow a matching site rule, or ask.</summary>
+        void TryRules_Click(object sender, RoutedEventArgs e)
+        {
+            if (!TryLink(out var link)) return;
+            var fresh = AppSettings.Load();
+            var host = Launcher.HostOf(link) ?? link;
+            var rule = Launcher.MatchRule(link, browsers, fresh, out var option);
+            if (option != null)
             {
-                MessageBox.Show(this, Loc.F("Error.BadLink", TryBox.Text), Loc.T("Error.Title"), MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                try
+                {
+                    Launcher.Open(option, link);
+                    ShowTryResult(Loc.F("Gen.RuleMatched", rule.Domain, option.Label + (option.Private ? $" ({Loc.T("Rules.Private")})" : "")));
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, Loc.F("Error.Launch", option.Browser.Name, ex.Message), Loc.T("Error.Title"), MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
-            new PickerWindow(link, browsers, AppSettings.Load()).Show();
+            ShowTryResult(rule != null ? Loc.F("Gen.RuleMissing", rule.Domain) : Loc.F("Gen.NoRule", host));
+            new PickerWindow(link, browsers, fresh).Show();
+        }
+
+        void ShowTryResult(string text)
+        {
+            TryResult.Text = text;
+            TryResult.Visibility = Visibility.Visible;
         }
 
         void AddRule_Click(object sender, RoutedEventArgs e)

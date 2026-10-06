@@ -79,6 +79,17 @@ namespace BrowserSelector
             return host.StartsWith("www.") ? host.Substring(4) : host;
         }
 
+        /// <summary>
+        /// The site rule for a link, as a click would apply it. <paramref name="option"/> is null when no rule
+        /// matches or the rule's browser is no longer installed; then the picker should ask.
+        /// </summary>
+        public static SiteRule MatchRule(string link, IEnumerable<Browser> browsers, AppSettings settings, out BrowserOption option)
+        {
+            var rule = settings.FindRule(HostOf(link));
+            option = rule == null ? null : BrowserOption.Resolve(browsers, rule.Target);
+            return rule;
+        }
+
         public static string BuildArguments(BrowserOption o, string link)
         {
             var args = new List<string>();

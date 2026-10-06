@@ -47,8 +47,7 @@ namespace BrowserSelector
             }
 
             var browsers = BrowserCatalog.Discover();
-            var rule = settings.FindRule(Launcher.HostOf(link));
-            var option = rule == null ? null : BrowserOption.Resolve(browsers, rule.Target);
+            Launcher.MatchRule(link, browsers, settings, out var option);
             if (option != null)
             {
                 try
