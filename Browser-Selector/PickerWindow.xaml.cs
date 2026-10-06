@@ -41,7 +41,8 @@ namespace BrowserSelector
 
             var options = BrowserOption.Build(browsers, settings.ShowProfiles);
             items = options.Select((o, i) => new PickerItem { Option = o, Number = i < 9 ? (i + 1).ToString() : "" }).ToList();
-            int selected = Math.Max(0, items.FindIndex(x => x.Option.Matches(settings.DefaultTarget)));
+            int selected = items.FindIndex(x => x.Option.Matches(settings.DefaultTarget));
+            if (selected < 0) selected = Math.Max(0, items.FindIndex(x => x.Option.Browser.Id == settings.DefaultTarget?.Browser));
             if (items.Count > 0) items[selected].IsDefault = true;
             List.ItemsSource = items;
             List.SelectedIndex = items.Count > 0 ? selected : -1;
