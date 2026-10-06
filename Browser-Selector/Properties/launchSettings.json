@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Browser-Selector": {
-      "commandName": "Project",
-      "commandLineArgs": "https://chat.openai.com/c/b4c1d9a5-72c6-4495-b555-ee0eebd50d60"
-    }
-  }
-}

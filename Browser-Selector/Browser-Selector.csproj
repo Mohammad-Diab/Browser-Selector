@@ -1,12 +1,30 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <RootNamespace>Browser_Selector</RootNamespace>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <TargetFramework>net48</TargetFramework>
     <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>BrowserSelector</AssemblyName>
+    <RootNamespace>BrowserSelector</RootNamespace>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <DebugType>none</DebugType>
+
+    <Version>0.1.0</Version>
+    <InformationalVersion>0.1.0-beta.1</InformationalVersion>
+    <Product>Browser Selector</Product>
+    <AssemblyTitle>Browser Selector</AssemblyTitle>
+    <Company>Mohammad Diab</Company>
+    <Copyright>Copyright © 2024-2026 Mohammad Diab</Copyright>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Extensions" />
+    <Resource Include="app.ico" />
+  </ItemGroup>
 
 </Project>

@@ -1,9 +1,7 @@
-﻿<Application x:Class="Browser_Selector.App"
+<Application x:Class="BrowserSelector.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:Browser_Selector"
-             StartupUri="MainWindow.xaml">
+             ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
-         
     </Application.Resources>
 </Application>
