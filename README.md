@@ -26,26 +26,37 @@ can skip the question.
   is its own entry; hold `Shift` for a private window.
 - **No installer, no admin rights**: registration is per user (HKCU) and "Unregister" removes it all.
 - **English and Arabic** (right-to-left), light and dark, following Windows.
-- **Tiny**: one ~180 KB exe on .NET Framework 4.8, which is already part of Windows 10 and 11.
+- **Tiny**: one ~190 KB exe on .NET Framework 4.8, which is already part of Windows 10 and 11.
 
 ## Install
 
-1. Download `BrowserSelector.exe` from the [latest release](https://github.com/Mohammad-Diab/Browser-Selector/releases).
-2. Put it in a folder where it can stay, for example `%LOCALAPPDATA%\Programs\BrowserSelector\`.
-   Windows remembers this path when you register; if you move the exe later, register again.
-3. Run it. The exe is not signed, so SmartScreen may warn you: choose **More info** → **Run anyway**.
+Download from the [latest release](https://github.com/Mohammad-Diab/Browser-Selector/releases):
+
+| File | Use it when |
+| --- | --- |
+| `BrowserSelector-Setup-<version>.exe` | **Most people.** Installs for your user only (no admin), registers the app, adds a Start menu entry, and uninstalls cleanly from Apps & Features. |
+| `BrowserSelector-<version>-portable.7z` | You want a portable copy (a USB stick, say). Settings stay in the folder. |
+| `BrowserSelector.exe` | You just want the exe. Settings go to `%APPDATA%\BrowserSelector`. |
+
+The files are not signed, so SmartScreen may warn you: choose **More info** → **Run anyway**.
+
+With the portable copy or the plain exe, put it in a folder where it can stay: Windows remembers
+the exe's path when you register, so after moving it, register again.
 
 ## Make it your default browser
 
 Windows doesn't let apps make themselves the default browser, so this takes two clicks from you:
 
-1. Run `BrowserSelector.exe` (with no link it opens its settings) and click **Register**.
+1. **Setup:** keep "Choose Browser Selector as my default browser now" ticked on the last page.
+   **Portable / exe:** run `BrowserSelector.exe` (with no link it opens its settings) and click **Register**.
 2. Windows opens **Settings → Apps → Default apps** (`ms-settings:defaultapps`).
    - **Windows 11:** select **Browser Selector**, then click **Set default** at the top.
    - **Windows 10:** under **Web browser**, click the current browser and choose **Browser Selector**.
 3. Back in Browser Selector, the status reads "It is your default browser".
 
-To stop using it, choose another default browser in Default apps, then click **Unregister**.
+To stop using it, choose another default browser in Default apps, then uninstall it from
+**Apps & Features** (Setup), or click **Unregister** and delete the folder (portable / exe).
+Uninstalling removes the registration and the settings.
 From a script: `BrowserSelector.exe --register` and `BrowserSelector.exe --unregister`.
 
 ## Ask, or open in your main browser
@@ -126,7 +137,18 @@ dotnet build Browser-Selector.sln -c Release
 ```
 
 The app is `Browser-Selector\bin\Release\net48\BrowserSelector.exe`.
-The icon is drawn by `tools/make-icon.py` (Python with Pillow).
+
+To build all release files (exe, portable 7z and Setup) into `release\`, with
+[7-Zip](https://www.7-zip.org/) and [Inno Setup 6](https://jrsoftware.org/isinfo.php)
+(`winget install JRSoftware.InnoSetup`) installed:
+
+```
+powershell -ExecutionPolicy Bypass -File tools\build-release.ps1
+```
+
+The installer script is `installer\BrowserSelector.iss`; the version comes from
+`<InformationalVersion>` in the project file. The icon is drawn by `tools/make-icon.py`
+(Python with Pillow).
 
 ## License
 
