@@ -7,6 +7,8 @@
     <LangVersion>latest</LangVersion>
     <AssemblyName>BrowserSelector</AssemblyName>
     <RootNamespace>BrowserSelector</RootNamespace>
+    <!-- Our own Main opens rule-matched links before WPF loads (App.xaml would generate one). -->
+    <StartupObject>BrowserSelector.Program</StartupObject>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PlatformTarget>AnyCPU</PlatformTarget>

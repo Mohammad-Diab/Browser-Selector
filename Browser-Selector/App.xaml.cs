@@ -14,7 +14,7 @@ namespace BrowserSelector
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
-            var settings = AppSettings.Load();
+            var settings = Program.Settings ?? AppSettings.Load();
             Loc.Init(settings.Language);
             Theme.Apply(Resources);
 
@@ -37,18 +37,18 @@ namespace BrowserSelector
                 return;
             }
 
-            // Windows passes the link as one argument; join in case a caller didn't quote it.
+            // Program.Main already tried to open the link without UI; here it needs the picker (or an error).
             var input = string.Join(" ", args);
-            if (!Launcher.TryNormalize(input, out var link))
+            var link = Program.Link;
+            if (link == null && !Launcher.TryNormalize(input, out link))
             {
                 MessageBox.Show(Loc.F("Error.BadLink", input), Loc.T("Error.Title"), MessageBoxButton.OK, MessageBoxImage.Warning);
                 Shutdown(1);
                 return;
             }
 
-            var browsers = BrowserCatalog.Discover();
-            // Holding Shift while opening a link always shows the picker.
-            var option = Native.IsShiftDown() ? null : Launcher.Route(link, browsers, settings, out _, out _);
+            var browsers = Program.Browsers ?? BrowserCatalog.Discover();
+            var option = Program.ForcePicker ? null : Launcher.Route(link, browsers, settings, out _, out _);
             if (option != null)
             {
                 try

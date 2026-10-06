@@ -29,7 +29,21 @@ namespace BrowserSelector
         public int IconIndex { get; set; }
         public BrowserFamily Family { get; set; }
         public string PrivateArg { get; set; }
-        public List<BrowserProfile> Profiles { get; } = new List<BrowserProfile>();
+        List<BrowserProfile> profiles;
+
+        /// <summary>Read on first use, so opening a link by a rule doesn't parse every browser's profile files.</summary>
+        public List<BrowserProfile> Profiles
+        {
+            get
+            {
+                if (profiles == null)
+                {
+                    profiles = new List<BrowserProfile>();
+                    BrowserCatalog.LoadProfiles(this);
+                }
+                return profiles;
+            }
+        }
 
         ImageSource icon;
         bool iconLoaded;
@@ -137,7 +151,6 @@ namespace BrowserSelector
                 catch { /* a broken hive should not hide the others */ }
             }
             result.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase));
-            foreach (var b in result) LoadProfiles(b);
             return result;
         }
 
@@ -208,7 +221,7 @@ namespace BrowserSelector
             if (File.Exists(path)) { file = path; index = idx; }
         }
 
-        static void LoadProfiles(Browser b)
+        internal static void LoadProfiles(Browser b)
         {
             try
             {
