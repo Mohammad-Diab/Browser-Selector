@@ -1,0 +1,119 @@
+<p align="center"><img src="docs/icon.png" width="96" alt="Browser Selector icon"></p>
+
+# Browser Selector
+
+Pick the browser for every link. Make Browser Selector your default browser, and each link you
+open asks which browser (and which profile) should open it. Sites you always open the same way
+can skip the question.
+
+<p align="center">
+  <img src="docs/picker.png" width="32%" alt="The picker">
+  <img src="docs/picker-dark.png" width="32%" alt="The picker in dark mode">
+  <img src="docs/picker-arabic.png" width="32%" alt="The picker in Arabic">
+</p>
+
+## Features
+
+- **Finds your browsers by itself**: Chrome, Edge, Firefox, Brave, Vivaldi, Opera, and any other
+  browser registered with Windows, with their icons.
+- **A small, fast picker** that opens next to the mouse: press `1`–`9`, or `Enter` for your
+  default choice, or `Esc` to cancel.
+- **Site rules**: "Always open github.com this way" sends that site (and its subdomains) straight to
+  a browser, without asking.
+- **Profiles and private windows**: each Chrome/Edge/Brave/Vivaldi profile and each Firefox profile
+  is its own entry; hold `Shift` for a private window.
+- **No installer, no admin rights**: registration is per user (HKCU) and "Unregister" removes it all.
+- **English and Arabic** (right-to-left), light and dark, following Windows.
+- **Tiny**: one ~180 KB exe on .NET Framework 4.8, which is already part of Windows 10 and 11.
+
+## Install
+
+1. Download `BrowserSelector.exe` from the [latest release](https://github.com/Mohammad-Diab/Browser-Selector/releases).
+2. Put it in a folder where it can stay, for example `%LOCALAPPDATA%\Programs\BrowserSelector\`.
+   Windows remembers this path when you register; if you move the exe later, register again.
+3. Run it. The exe is not signed, so SmartScreen may warn you: choose **More info** → **Run anyway**.
+
+## Make it your default browser
+
+Windows doesn't let apps make themselves the default browser, so this takes two clicks from you:
+
+1. Run `BrowserSelector.exe` (with no link it opens its settings) and click **Register**.
+2. Windows opens **Settings → Apps → Default apps** (`ms-settings:defaultapps`).
+   - **Windows 11:** select **Browser Selector**, then click **Set default** at the top.
+   - **Windows 10:** under **Web browser**, click the current browser and choose **Browser Selector**.
+3. Back in Browser Selector, the status reads "It is your default browser".
+
+To stop using it, choose another default browser in Default apps, then click **Unregister**.
+From a script: `BrowserSelector.exe --register` and `BrowserSelector.exe --unregister`.
+
+<p align="center"><img src="docs/settings.png" width="70%" alt="Settings"></p>
+
+## Using the picker
+
+| Key | Action |
+| --- | --- |
+| `1` – `9` | Open with that browser or profile |
+| `Enter` | Open with the highlighted entry (it starts on your default choice; arrows move it) |
+| `Shift` + number, `Shift` + `Enter`, `Shift` + click | Open in a private window |
+| `Ctrl` + `C` | Copy the link |
+| `Esc` | Close without opening anything |
+
+Choose the entry that `Enter` opens in **Settings → General → Quick choice**. The **Try it** box there
+shows the picker for any link without changing anything in Windows.
+
+## Site rules
+
+Tick **Always open *site* this way** in the picker, or add a rule in **Settings → Site rules**.
+
+- A rule for `github.com` also covers `gist.github.com`; the most specific rule wins.
+- `www.` is ignored, so `www.youtube.com` and `youtube.com` are the same site.
+- A rule can open a profile, and can open a private window.
+- If a rule's browser is uninstalled, the picker shows up again.
+
+<p align="center"><img src="docs/rules.png" width="70%" alt="Site rules"></p>
+
+## Profiles and private windows
+
+| Browser | Profiles come from | Profile switch | Private switch |
+| --- | --- | --- | --- |
+| Chrome, Edge, Brave, Vivaldi, Chromium | `User Data\Local State` | `--profile-directory` | `--incognito` (Edge: `--inprivate`) |
+| Opera | – | – | `--private` |
+| Firefox, Firefox Developer Edition, LibreWolf, Waterfox, Floorp, Zen | `profiles.ini` | `-P` | `-private-window` |
+
+A browser with only one profile shows as a single entry. Turn profiles off in
+**Settings → General** to show one entry per browser.
+
+## Settings file
+
+Settings live in `%APPDATA%\BrowserSelector\settings.json`.
+For a portable copy (on a USB stick, say), put a `settings.json` next to the exe; `{}` is enough
+to start, and Browser Selector will keep its settings there.
+
+## What it changes in Windows
+
+Only when you click **Register**, and only for your user account:
+
+- `HKCU\Software\Clients\StartMenuInternet\BrowserSelector` (with `Capabilities` for http, https, .htm and .html)
+- `HKCU\Software\RegisteredApplications` → `Browser Selector`
+- `HKCU\Software\Classes\BrowserSelectorURL` and `BrowserSelectorHTML` (ProgIDs)
+- `HKCU\Software\Classes\.htm\OpenWithProgids` and `.html\OpenWithProgids`
+
+**Unregister** deletes all of them.
+
+## Build
+
+You need Windows and the [.NET SDK](https://dotnet.microsoft.com/download) 8 or newer
+(the .NET Framework 4.8 reference assemblies are downloaded during restore), or Visual Studio 2022+.
+
+```
+git clone https://github.com/Mohammad-Diab/Browser-Selector
+cd Browser-Selector
+dotnet build Browser-Selector.sln -c Release
+```
+
+The app is `Browser-Selector\bin\Release\net48\BrowserSelector.exe`.
+The icon is drawn by `tools/make-icon.py` (Python with Pillow).
+
+## License
+
+[MIT](LICENSE) © 2024-2026 Mohammad Diab
