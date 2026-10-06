@@ -24,6 +24,9 @@ namespace BrowserSelector
     public sealed class AppSettings
     {
         public string Language { get; set; } = "auto";   // auto | en | ar
+        /// <summary>True: links without a rule show the picker. False: they open in DefaultTarget.</summary>
+        public bool AskEveryTime { get; set; } = true;
+        /// <summary>The main browser: opened without asking, or highlighted (Enter) in the picker.</summary>
         public Target DefaultTarget { get; set; }
         public bool ShowProfiles { get; set; } = true;
         public List<SiteRule> Rules { get; set; } = new List<SiteRule>();

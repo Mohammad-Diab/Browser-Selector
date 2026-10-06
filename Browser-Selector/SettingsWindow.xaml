@@ -46,19 +46,26 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- The one choice most people need. -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Text="{local:Tr Gen.Quick}" Style="{StaticResource Header}" />
-                            <Grid>
+                            <TextBlock Text="{local:Tr Open.Header}" Style="{StaticResource Header}" />
+                            <RadioButton x:Name="AskRadio" GroupName="Open" Content="{local:Tr Open.Ask}" Checked="OpenMode_Checked" />
+                            <TextBlock Text="{local:Tr Open.AskHint}" Style="{StaticResource MutedText}" Margin="26,2,0,10" />
+                            <RadioButton x:Name="AutoRadio" GroupName="Open" Content="{local:Tr Open.Auto}" Checked="OpenMode_Checked" />
+                            <TextBlock Style="{StaticResource MutedText}" Margin="26,2,0,0">
+                                <Run Text="{local:Tr Open.AutoHint}" />
+                                <Hyperlink Foreground="{DynamicResource Accent}" Click="EditRules_Click"><Run Text="{local:Tr Open.EditRules}" /></Hyperlink>
+                            </TextBlock>
+                            <Grid Margin="0,14,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{local:Tr Gen.EnterOpens}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                <TextBlock Text="{local:Tr Open.Main}" VerticalAlignment="Center" Margin="0,0,12,0" />
                                 <ComboBox x:Name="DefaultCombo" Grid.Column="1" ItemTemplate="{StaticResource OptionTemplate}"
                                           SelectionChanged="DefaultCombo_SelectionChanged" MaxWidth="360" HorizontalAlignment="Left" MinWidth="240" />
                             </Grid>
-                            <CheckBox x:Name="ShowProfilesBox" Content="{local:Tr Gen.ShowProfiles}" Margin="0,12,0,0" Click="ShowProfiles_Click" />
                         </StackPanel>
                     </Border>
 
@@ -69,18 +76,27 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Style="{StaticResource Card}">
-                        <StackPanel>
-                            <TextBlock Text="{local:Tr Gen.Try}" Style="{StaticResource Header}" />
-                            <TextBlock Text="{local:Tr Gen.TryHint}" Style="{StaticResource MutedText}" Margin="0,0,0,10" />
-                            <TextBox x:Name="TryBox" Text="https://github.com/Mohammad-Diab/Browser-Selector" FlowDirection="LeftToRight" />
-                            <WrapPanel Margin="0,8,0,0">
-                                <Button Content="{local:Tr Gen.TryButton}" Click="Try_Click" Margin="0,0,8,4" />
-                                <Button Content="{local:Tr Gen.TryRules}" Click="TryRules_Click" Margin="0,0,8,4" />
-                            </WrapPanel>
-                            <TextBlock x:Name="TryResult" Style="{StaticResource MutedText}" Margin="0,6,0,0" Visibility="Collapsed" />
-                        </StackPanel>
-                    </Border>
+                    <!-- Everything else stays out of the way until asked for. -->
+                    <ToggleButton x:Name="AdvancedToggle" Style="{StaticResource SectionToggle}" Content="{local:Tr Gen.Advanced}"
+                                  HorizontalAlignment="Left" Margin="0,0,0,8" Click="AdvancedToggle_Click" />
+                    <StackPanel x:Name="AdvancedPanel" Visibility="Collapsed">
+                        <Border Style="{StaticResource Card}">
+                            <CheckBox x:Name="ShowProfilesBox" Content="{local:Tr Gen.ShowProfiles}" Click="ShowProfiles_Click" />
+                        </Border>
+
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Text="{local:Tr Gen.Try}" Style="{StaticResource Header}" />
+                                <TextBlock Text="{local:Tr Gen.TryHint}" Style="{StaticResource MutedText}" Margin="0,0,0,10" />
+                                <TextBox x:Name="TryBox" Text="https://github.com/Mohammad-Diab/Browser-Selector" FlowDirection="LeftToRight" />
+                                <WrapPanel Margin="0,8,0,0">
+                                    <Button Content="{local:Tr Gen.TryButton}" Click="Try_Click" Margin="0,0,8,4" />
+                                    <Button Content="{local:Tr Gen.TryRules}" Click="TryRules_Click" Margin="0,0,8,4" />
+                                </WrapPanel>
+                                <TextBlock x:Name="TryResult" Style="{StaticResource MutedText}" Margin="0,6,0,0" Visibility="Collapsed" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
         </TabItem>

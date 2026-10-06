@@ -46,6 +46,12 @@ namespace BrowserSelector
         [DllImport("user32.dll")]
         public static extern bool SetForegroundWindow(IntPtr hwnd);
 
+        [DllImport("user32.dll")]
+        static extern short GetAsyncKeyState(int key);
+
+        /// <summary>Whether Shift is held right now (works before any window exists).</summary>
+        public static bool IsShiftDown() => (GetAsyncKeyState(0x10) & 0x8000) != 0;
+
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         public static extern uint PrivateExtractIcons(string file, int index, int cx, int cy,
             IntPtr[] icons, uint[] ids, uint count, uint flags);

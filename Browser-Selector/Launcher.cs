@@ -79,15 +79,27 @@ namespace BrowserSelector
             return host.StartsWith("www.") ? host.Substring(4) : host;
         }
 
+        public enum RouteReason { Rule, MainBrowser, Ask }
+
         /// <summary>
-        /// The site rule for a link, as a click would apply it. <paramref name="option"/> is null when no rule
-        /// matches or the rule's browser is no longer installed; then the picker should ask.
+        /// What a click on the link should open without asking: the browser of a matching site rule, else the
+        /// main browser when the user chose not to be asked. Null means show the picker. <paramref name="rule"/>
+        /// is the matching rule even when its browser is gone.
         /// </summary>
-        public static SiteRule MatchRule(string link, IEnumerable<Browser> browsers, AppSettings settings, out BrowserOption option)
+        public static BrowserOption Route(string link, IList<Browser> browsers, AppSettings settings,
+            out SiteRule rule, out RouteReason reason)
         {
-            var rule = settings.FindRule(HostOf(link));
-            option = rule == null ? null : BrowserOption.Resolve(browsers, rule.Target);
-            return rule;
+            rule = settings.FindRule(HostOf(link));
+            var option = rule == null ? null : BrowserOption.Resolve(browsers, rule.Target);
+            if (option != null) { reason = RouteReason.Rule; return option; }
+
+            if (!settings.AskEveryTime && browsers.Count > 0)
+            {
+                reason = RouteReason.MainBrowser;
+                return BrowserOption.Resolve(browsers, settings.DefaultTarget) ?? new BrowserOption { Browser = browsers[0] };
+            }
+            reason = RouteReason.Ask;
+            return null;
         }
 
         public static string BuildArguments(BrowserOption o, string link)

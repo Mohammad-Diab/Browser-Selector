@@ -5,7 +5,7 @@ using System.Windows;
 namespace BrowserSelector
 {
     /// <summary>
-    /// BrowserSelector.exe &lt;link&gt;   → open by site rule, or show the picker
+    /// BrowserSelector.exe &lt;link&gt;   → open by site rule, else in the main browser or the picker (Shift: picker)
     /// BrowserSelector.exe          → settings
     /// BrowserSelector.exe --register | --unregister   → change the registration without UI
     /// </summary>
@@ -47,7 +47,8 @@ namespace BrowserSelector
             }
 
             var browsers = BrowserCatalog.Discover();
-            Launcher.MatchRule(link, browsers, settings, out var option);
+            // Holding Shift while opening a link always shows the picker.
+            var option = Native.IsShiftDown() ? null : Launcher.Route(link, browsers, settings, out _, out _);
             if (option != null)
             {
                 try

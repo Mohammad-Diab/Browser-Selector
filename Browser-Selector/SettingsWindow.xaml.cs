@@ -39,7 +39,7 @@ namespace BrowserSelector
         List<Browser> browsers;
         bool loading;
 
-        public SettingsWindow(int tab = 0)
+        public SettingsWindow(int tab = 0, bool showAdvanced = false)
         {
             InitializeComponent();
             FlowDirection = Loc.Flow;
@@ -50,6 +50,10 @@ namespace BrowserSelector
             LanguageCombo.ItemsSource = new[] { Loc.T("Lang.Auto"), "English", "العربية" };
             LanguageCombo.SelectedIndex = settings.Language == "en" ? 1 : settings.Language == "ar" ? 2 : 0;
             ShowProfilesBox.IsChecked = settings.ShowProfiles;
+            AskRadio.IsChecked = settings.AskEveryTime;
+            AutoRadio.IsChecked = !settings.AskEveryTime;
+            AdvancedToggle.IsChecked = showAdvanced;
+            AdvancedPanel.Visibility = showAdvanced ? Visibility.Visible : Visibility.Collapsed;
             loading = false;
 
             var version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
@@ -76,10 +80,11 @@ namespace BrowserSelector
                 .Select(o => new OptionItem { Option = o, Label = o.Label }).ToList();
 
             loading = true;
-            var defaults = new List<OptionItem> { new OptionItem { Label = Loc.T("Gen.FirstInList") } };
-            defaults.AddRange(options);
-            DefaultCombo.ItemsSource = defaults;
-            DefaultCombo.SelectedItem = defaults.FirstOrDefault(x => x.Option != null && x.Option.Matches(settings.DefaultTarget)) ?? defaults[0];
+            // With no main browser saved yet, the first one is what both modes use, so show it.
+            DefaultCombo.ItemsSource = options;
+            DefaultCombo.SelectedItem = options.FirstOrDefault(x => x.Option.Matches(settings.DefaultTarget))
+                ?? options.FirstOrDefault(x => x.Option.Browser.Id == settings.DefaultTarget?.Browser)
+                ?? options.FirstOrDefault();
             RuleTarget.ItemsSource = options;
             RuleTarget.SelectedIndex = options.Count > 0 ? 0 : -1;
             loading = false;
@@ -158,6 +163,21 @@ namespace BrowserSelector
             Save();
         }
 
+        void OpenMode_Checked(object sender, RoutedEventArgs e)
+        {
+            if (loading) return;
+            settings.AskEveryTime = AskRadio.IsChecked == true;
+            // Save the main browser the combo shows, so "open without asking" never depends on list order.
+            if (settings.DefaultTarget == null)
+                settings.DefaultTarget = (DefaultCombo.SelectedItem as OptionItem)?.Option?.ToTarget();
+            Save();
+        }
+
+        void EditRules_Click(object sender, RoutedEventArgs e) => Tabs.SelectedIndex = 1;
+
+        void AdvancedToggle_Click(object sender, RoutedEventArgs e) =>
+            AdvancedPanel.Visibility = AdvancedToggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
         void ShowProfiles_Click(object sender, RoutedEventArgs e)
         {
             settings.ShowProfiles = ShowProfilesBox.IsChecked == true;
@@ -171,7 +191,7 @@ namespace BrowserSelector
             Save();
             Loc.Init(settings.Language);
             // Rebuild the window so every string and the layout direction follow the new language.
-            var w = new SettingsWindow(Tabs.SelectedIndex)
+            var w = new SettingsWindow(Tabs.SelectedIndex, AdvancedToggle.IsChecked == true)
             {
                 WindowStartupLocation = WindowStartupLocation.Manual,
                 Left = Left, Top = Top, Width = Width, Height = Height,
@@ -193,19 +213,22 @@ namespace BrowserSelector
             if (TryLink(out var link)) new PickerWindow(link, browsers, AppSettings.Load()).Show();
         }
 
-        /// <summary>Does what clicking the link would do: follow a matching site rule, or ask.</summary>
+        /// <summary>Does what clicking the link would do: a matching site rule, the main browser, or ask.</summary>
         void TryRules_Click(object sender, RoutedEventArgs e)
         {
             if (!TryLink(out var link)) return;
             var fresh = AppSettings.Load();
             var host = Launcher.HostOf(link) ?? link;
-            var rule = Launcher.MatchRule(link, browsers, fresh, out var option);
+            var option = Launcher.Route(link, browsers, fresh, out var rule, out var reason);
             if (option != null)
             {
                 try
                 {
                     Launcher.Open(option, link);
-                    ShowTryResult(Loc.F("Gen.RuleMatched", rule.Domain, option.Label + (option.Private ? $" ({Loc.T("Rules.Private")})" : "")));
+                    var label = option.Label + (option.Private ? $" ({Loc.T("Rules.Private")})" : "");
+                    ShowTryResult(reason == Launcher.RouteReason.Rule ? Loc.F("Gen.RuleMatched", rule.Domain, label)
+                        : rule != null ? Loc.F("Gen.RuleMissingMain", rule.Domain, label)
+                        : Loc.F("Gen.MainOpened", host, label));
                     return;
                 }
                 catch (Exception ex)
