@@ -33,7 +33,11 @@ DisableDirPage=auto
 DisableReadyPage=yes
 UninstallDisplayName=Browser Selector
 UninstallDisplayIcon={app}\BrowserSelector.exe
-SetupIconFile=..\Browser-Selector\app.ico
+; Setup has its own icon (the app icon with an install badge) so it isn't mistaken for the app.
+; Artwork comes from tools\make-icon.py.
+SetupIconFile=setup.ico
+WizardSmallImageFile=wizard-small.png
+WizardImageFile=wizard-large.png
 WizardStyle=modern
 ShowLanguageDialog=auto
 Compression=lzma2/ultra64
