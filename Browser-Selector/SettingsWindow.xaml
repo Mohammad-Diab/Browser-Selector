@@ -1,0 +1,194 @@
+<Window x:Class="BrowserSelector.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:BrowserSelector"
+        Style="{StaticResource AppWindow}"
+        Title="{local:Tr Settings.Title}" Width="680" Height="600" MinWidth="520" MinHeight="420"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <DataTemplate x:Key="OptionTemplate" DataType="local:OptionItem">
+            <StackPanel Orientation="Horizontal">
+                <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+            </StackPanel>
+        </DataTemplate>
+        <Style x:Key="Page" TargetType="ScrollViewer">
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="Padding" Value="20,16,20,8" />
+        </Style>
+    </Window.Resources>
+
+    <TabControl x:Name="Tabs" Background="Transparent" BorderThickness="0">
+        <!-- General -->
+        <TabItem Header="{local:Tr Tab.General}">
+            <ScrollViewer Style="{StaticResource Page}">
+                <StackPanel>
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="{local:Tr Reg.Header}" Style="{StaticResource Header}" />
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse x:Name="StatusDot" Width="9" Height="9" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <TextBlock x:Name="StatusText" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock x:Name="DefaultText" Style="{StaticResource MutedText}" Margin="17,2,0,0" />
+                            <TextBlock Text="{local:Tr Reg.Steps}" Style="{StaticResource MutedText}" Margin="0,12,0,0" />
+                            <WrapPanel Margin="0,12,0,0">
+                                <Button x:Name="RegisterButton" Style="{StaticResource AccentButton}" Content="{local:Tr Reg.Register}" Click="Register_Click" Margin="0,0,8,4" />
+                                <Button Content="{local:Tr Reg.OpenSettings}" Click="OpenDefaultApps_Click" Margin="0,0,8,4" />
+                                <Button x:Name="UnregisterButton" Content="{local:Tr Reg.Unregister}" Click="Unregister_Click" Margin="0,0,8,4" />
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="{local:Tr Gen.Quick}" Style="{StaticResource Header}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{local:Tr Gen.EnterOpens}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                <ComboBox x:Name="DefaultCombo" Grid.Column="1" ItemTemplate="{StaticResource OptionTemplate}"
+                                          SelectionChanged="DefaultCombo_SelectionChanged" MaxWidth="360" HorizontalAlignment="Left" MinWidth="240" />
+                            </Grid>
+                            <CheckBox x:Name="ShowProfilesBox" Content="{local:Tr Gen.ShowProfiles}" Margin="0,12,0,0" Click="ShowProfiles_Click" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="{local:Tr Gen.Language}" Style="{StaticResource Header}" />
+                            <ComboBox x:Name="LanguageCombo" HorizontalAlignment="Left" MinWidth="240" SelectionChanged="Language_SelectionChanged" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <StackPanel>
+                            <TextBlock Text="{local:Tr Gen.Try}" Style="{StaticResource Header}" />
+                            <TextBlock Text="{local:Tr Gen.TryHint}" Style="{StaticResource MutedText}" Margin="0,0,0,10" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="TryBox" Text="https://github.com/Mohammad-Diab/Browser-Selector" FlowDirection="LeftToRight" />
+                                <Button Grid.Column="1" Content="{local:Tr Gen.TryButton}" Click="Try_Click" Margin="8,0,0,0" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <!-- Rules -->
+        <TabItem Header="{local:Tr Tab.Rules}">
+            <DockPanel Margin="20,16,20,16">
+                <TextBlock DockPanel.Dock="Top" Text="{local:Tr Rules.Hint}" Style="{StaticResource MutedText}" Margin="0,0,0,12" />
+                <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Padding="12">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="RuleDomain" FlowDirection="LeftToRight" ToolTip="example.com" KeyDown="RuleDomain_KeyDown" />
+                            <ComboBox x:Name="RuleTarget" Grid.Column="1" Margin="8,0,0,0" ItemTemplate="{StaticResource OptionTemplate}" />
+                            <CheckBox x:Name="RulePrivate" Grid.Column="2" Content="{local:Tr Rules.PrivateBox}" Margin="12,0,0,0" />
+                            <Button Grid.Column="3" Style="{StaticResource AccentButton}" Content="{local:Tr Rules.Add}" Click="AddRule_Click" Margin="12,0,0,0" />
+                        </Grid>
+                        <TextBlock x:Name="RuleError" Foreground="{DynamicResource Danger}" Margin="0,8,0,0" Visibility="Collapsed" Text="{local:Tr Rules.BadDomain}" />
+                    </StackPanel>
+                </Border>
+                <TextBlock x:Name="RulesEmpty" DockPanel.Dock="Top" Text="{local:Tr Rules.Empty}" Style="{StaticResource MutedText}" Margin="4,8" />
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="RulesList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="local:RuleItem">
+                                <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Domain}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="{local:Tr Rules.Remove}"
+                                                Click="RemoveRule_Click" Tag="{Binding}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </TabItem>
+
+        <!-- Browsers -->
+        <TabItem Header="{local:Tr Tab.Browsers}">
+            <DockPanel Margin="20,16,20,16">
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{local:Tr Browsers.Hint}" Style="{StaticResource MutedText}" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Content="{local:Tr Browsers.Refresh}" Click="Refresh_Click" Margin="12,0,0,0" />
+                </Grid>
+                <TextBlock x:Name="BrowsersEmpty" DockPanel.Dock="Top" Text="{local:Tr Browsers.None}" Style="{StaticResource MutedText}" Visibility="Collapsed" />
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl x:Name="BrowsersList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="local:BrowserItem">
+                                <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Image Source="{Binding Browser.Icon}" Width="32" Height="32" Margin="0,0,12,0" VerticalAlignment="Top" RenderOptions.BitmapScalingMode="HighQuality" />
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Browser.Name}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding Browser.ExePath}" Style="{StaticResource MutedText}" FontSize="11.5" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+                                            <TextBlock Text="{Binding Profiles}" Style="{StaticResource MutedText}" FontSize="11.5" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </TabItem>
+
+        <!-- About -->
+        <TabItem Header="{local:Tr Tab.About}">
+            <ScrollViewer Style="{StaticResource Page}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,16">
+                        <Image x:Name="AboutIcon" Width="56" Height="56" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="Browser Selector" FontSize="20" FontWeight="SemiBold" />
+                            <TextBlock x:Name="VersionText" Style="{StaticResource MutedText}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock Text="{local:Tr About.Text}" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,12,0,0" FlowDirection="LeftToRight" HorizontalAlignment="Left">
+                        <Hyperlink x:Name="RepoLink" Foreground="{DynamicResource Accent}" Click="RepoLink_Click">github.com/Mohammad-Diab/Browser-Selector</Hyperlink>
+                    </TextBlock>
+                    <TextBlock Text="{local:Tr About.License}" Style="{StaticResource MutedText}" Margin="0,4,0,0" />
+                    <TextBlock Text="© 2024-2026 Mohammad Diab" Style="{StaticResource MutedText}" Margin="0,2,0,0" />
+                    <TextBlock Text="{local:Tr About.SettingsFile}" FontWeight="SemiBold" Margin="0,20,0,4" />
+                    <TextBox x:Name="SettingsPathBox" IsReadOnly="True" FlowDirection="LeftToRight" />
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+    </TabControl>
+</Window>
