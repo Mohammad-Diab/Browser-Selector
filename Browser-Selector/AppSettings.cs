@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
 namespace BrowserSelector
 {
@@ -37,6 +39,15 @@ namespace BrowserSelector
         public bool ShowProfiles { get; set; } = true;
         public List<SiteRule> Rules { get; set; } = new List<SiteRule>();
 
+        /// <summary>The file exists but stayed locked while loading: these are defaults, and must not be saved over it.</summary>
+        public bool Unreadable { get; private set; }
+
+        /// <summary>
+        /// Set when this process found settings.json broken (say, a typo from editing it by hand) and moved it aside
+        /// to this path instead of overwriting it. The UI tells the user.
+        /// </summary>
+        public static string SetAsidePath { get; private set; }
+
         const string FileName = "settings.json";
 
         /// <summary>
@@ -52,39 +63,101 @@ namespace BrowserSelector
             }
         }
 
+        /// <summary>
+        /// Reads the settings. A missing file gives defaults. A locked file is retried, then gives defaults marked
+        /// <see cref="Unreadable"/>. A file that doesn't parse is renamed to settings.json.bad-&lt;time&gt; (kept for
+        /// the user to fix) and gives defaults, so a later save can never silently wipe the rules.
+        /// </summary>
         public static AppSettings Load()
         {
-            try
+            var file = FilePath;
+            string text = null;
+            for (int attempt = 1; text == null; attempt++)
             {
-                var file = FilePath;
-                if (File.Exists(file) && Json.Parse(File.ReadAllText(file)) is Dictionary<string, object> o)
+                try
                 {
-                    var s = new AppSettings
-                    {
-                        Language = o.Str("Language") ?? "auto",
-                        AskEveryTime = o.Bool("AskEveryTime", true),
-                        DefaultTarget = o.Obj("DefaultTarget") is Dictionary<string, object> t ? Target.FromJson(t) : null,
-                        ShowProfiles = o.Bool("ShowProfiles", true),
-                    };
-                    foreach (var r in (o.Arr("Rules") ?? new List<object>()).OfType<Dictionary<string, object>>())
-                    {
-                        var domain = r.Str("Domain");
-                        var target = r.Obj("Target") is Dictionary<string, object> rt ? Target.FromJson(rt) : null;
-                        if (!string.IsNullOrEmpty(domain) && target != null)
-                            s.Rules.Add(new SiteRule { Domain = domain, Target = target });
-                    }
-                    return s;
+                    if (!File.Exists(file)) return new AppSettings();
+                    text = File.ReadAllText(file);
+                }
+                catch (IOException) when (attempt < 4)
+                {
+                    Thread.Sleep(80); // another app (an antivirus, OneDrive, another copy of us) has it open
+                }
+                catch
+                {
+                    return new AppSettings { Unreadable = true };
                 }
             }
-            catch { /* a broken file falls back to defaults */ }
-            return new AppSettings();
+
+            try
+            {
+                return FromJson(Json.Parse(text) as Dictionary<string, object> ?? throw new FormatException("not a JSON object"));
+            }
+            catch (FormatException)
+            {
+                var aside = file + ".bad-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+                try
+                {
+                    File.Move(file, aside);
+                    // A portable copy is portable because settings.json sits next to the exe: keep one there.
+                    if (Path.GetDirectoryName(file) == Path.GetDirectoryName(BrowserCatalog.SelfPath)) File.WriteAllText(file, "{}");
+                }
+                catch { return new AppSettings { Unreadable = true }; }
+                SetAsidePath = aside;
+                return new AppSettings();
+            }
         }
 
-        public void Save()
+        static AppSettings FromJson(Dictionary<string, object> o)
+        {
+            var s = new AppSettings
+            {
+                Language = o.Str("Language") ?? "auto",
+                AskEveryTime = o.Bool("AskEveryTime", true),
+                DefaultTarget = o.Obj("DefaultTarget") is Dictionary<string, object> t ? Target.FromJson(t) : null,
+                ShowProfiles = o.Bool("ShowProfiles", true),
+            };
+            foreach (var r in (o.Arr("Rules") ?? new List<object>()).OfType<Dictionary<string, object>>())
+            {
+                // Normalized, so a hand-written "WWW.GitHub.com" matches like "github.com".
+                var domain = NormalizeDomain(r.Str("Domain"));
+                var target = r.Obj("Target") is Dictionary<string, object> rt ? Target.FromJson(rt) : null;
+                if (domain != null && target != null) s.SetRule(domain, target);
+            }
+            return s;
+        }
+
+        /// <summary>
+        /// Load, change, save, as one step that other Browser Selector processes wait for (two pickers remembering
+        /// a site at once must not lose a rule). Throws when the file can't be read or written.
+        /// </summary>
+        public static AppSettings Update(Action<AppSettings> change)
+        {
+            using (var mutex = new Mutex(false, @"Local\BrowserSelector.Settings"))
+            {
+                bool owned;
+                try { owned = mutex.WaitOne(TimeSpan.FromSeconds(3)); }
+                catch (AbandonedMutexException) { owned = true; }
+                try
+                {
+                    var s = Load();
+                    if (s.Unreadable) throw new IOException(FilePath + " is in use by another program. Try again.");
+                    change(s);
+                    s.Save();
+                    return s;
+                }
+                finally
+                {
+                    if (owned) mutex.ReleaseMutex();
+                }
+            }
+        }
+
+        void Save()
         {
             var file = FilePath;
             Directory.CreateDirectory(Path.GetDirectoryName(file));
-            var tmp = file + ".tmp";
+            var tmp = file + "." + Guid.NewGuid().ToString("N") + ".tmp";
             var json = new Dictionary<string, object>
             {
                 ["Language"] = Language,
@@ -93,9 +166,16 @@ namespace BrowserSelector
                 ["ShowProfiles"] = ShowProfiles,
                 ["Rules"] = Rules.Select(r => new Dictionary<string, object> { ["Domain"] = r.Domain, ["Target"] = r.Target.ToJson() }).ToList(),
             };
-            File.WriteAllText(tmp, Json.Write(json) + "\n");
-            if (File.Exists(file)) File.Replace(tmp, file, null);
-            else File.Move(tmp, file);
+            try
+            {
+                File.WriteAllText(tmp, Json.Write(json) + "\n");
+                if (File.Exists(file)) File.Replace(tmp, file, null, ignoreMetadataErrors: true);
+                else File.Move(tmp, file);
+            }
+            finally
+            {
+                if (File.Exists(tmp)) File.Delete(tmp);
+            }
         }
 
         /// <summary>The most specific rule for a host ("docs.github.com" prefers a "docs.github.com" rule over "github.com").</summary>
@@ -122,9 +202,19 @@ namespace BrowserSelector
             input = input.Trim();
             if (!input.Contains("://")) input = "https://" + input;
             if (!Uri.TryCreate(input, UriKind.Absolute, out var uri) || string.IsNullOrEmpty(uri.Host)) return null;
-            var host = uri.IdnHost.ToLowerInvariant().TrimEnd('.');
-            if (host.StartsWith("www.")) host = host.Substring(4);
+            var host = CleanHost(uri.IdnHost);
             return host.Length > 0 ? host : null;
+        }
+
+        /// <summary>
+        /// Lower case, no trailing dot, and no leading "www." unless that would leave a bare top-level domain
+        /// ("www.com" stays "www.com", so a rule for it can't swallow every .com site).
+        /// </summary>
+        public static string CleanHost(string host)
+        {
+            host = host.ToLowerInvariant().TrimEnd('.');
+            if (host.StartsWith("www.", StringComparison.Ordinal) && host.IndexOf('.', 4) > 4) host = host.Substring(4);
+            return host;
         }
     }
 }

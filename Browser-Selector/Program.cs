@@ -47,7 +47,8 @@ namespace BrowserSelector
                 Link = link;
                 Settings = AppSettings.Load();
                 Browsers = BrowserCatalog.Discover();
-                if (ForcePicker) return false;
+                // A broken settings file was just set aside: go through the app, which tells the user.
+                if (ForcePicker || AppSettings.SetAsidePath != null) return false;
 
                 var option = Launcher.Route(link, Browsers, Settings, out _, out _);
                 if (option == null) return false;

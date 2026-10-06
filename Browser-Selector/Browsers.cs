@@ -14,8 +14,12 @@ namespace BrowserSelector
 
     public sealed class BrowserProfile
     {
-        public string Id { get; set; }    // Chromium: profile directory; Firefox: profile name
+        // Ids stay the same when a profile is renamed. Chromium: the profile directory ("Profile 1").
+        // Firefox: the Path value from profiles.ini ("Profiles/abcd.default-release").
+        public string Id { get; set; }
         public string Name { get; set; }
+        /// <summary>Firefox: the profile's full folder, opened with -profile.</summary>
+        public string Folder { get; set; }
     }
 
     public sealed class Browser
@@ -203,10 +207,22 @@ namespace BrowserSelector
                 exe = command.Substring(0, end + 4);
                 args = command.Substring(end + 4);
             }
-            // Drop the URL placeholders some browsers leave in their command.
-            args = args.Replace("\"%1\"", "").Replace("%1", "").Trim();
+            args = CleanArgs(args);
             return exe.Length > 0;
         }
+
+        // Placeholders for the link, and switches that only make sense right before it ("--single-argument %1",
+        // "-osint -url %1"). Left in, they would land in front of our own switches and swallow them.
+        static readonly HashSet<string> LinkTokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "%1", "\"%1\"", "%L", "\"%L\"", "%*", "--single-argument", "-osint", "-url",
+        };
+
+        static string CleanArgs(string args) =>
+            string.Join(" ", System.Text.RegularExpressions.Regex.Matches(args, "\"[^\"]*\"|\\S+")
+                .Cast<System.Text.RegularExpressions.Match>()
+                .Select(m => m.Value)
+                .Where(t => !LinkTokens.Contains(t)));
 
         static void ParseIcon(string value, ref string file, ref int index)
         {
@@ -281,15 +297,21 @@ namespace BrowserSelector
             var names = new List<string>();
             var installDefaults = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // install hash -> path
             var paths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // name -> path
+            var relative = new HashSet<string>(StringComparer.OrdinalIgnoreCase);       // names with IsRelative=1
             string section = null, name = null, path = null;
+            bool isRelative = true;
             void Flush()
             {
-                if (section != null && section.StartsWith("Profile", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(name))
+                // A profile without a Path can't be opened by folder, and isn't a usable entry.
+                if (section != null && section.StartsWith("Profile", StringComparison.OrdinalIgnoreCase)
+                    && !string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(path))
                 {
                     names.Add(name);
-                    if (path != null) paths[name] = path;
+                    paths[name] = path;
+                    if (isRelative) relative.Add(name);
                 }
                 name = path = null;
+                isRelative = true;
             }
             foreach (var raw in File.ReadAllLines(file))
             {
@@ -301,6 +323,7 @@ namespace BrowserSelector
                 var val = line.Substring(eq + 1);
                 if (key == "Name") name = val;
                 else if (key == "Path") path = val;
+                else if (key == "IsRelative") isRelative = val.Trim() != "0";
                 else if (key == "Default" && section.StartsWith("Install", StringComparison.OrdinalIgnoreCase))
                     installDefaults[section.Substring("Install".Length)] = val;
             }
@@ -323,7 +346,13 @@ namespace BrowserSelector
                 names.RemoveAll(n => paths.TryGetValue(n, out var p) && others.Contains(p));
             }
 
-            foreach (var n in names) b.Profiles.Add(new BrowserProfile { Id = n, Name = n });
+            var iniDir = Path.GetDirectoryName(file);
+            foreach (var n in names)
+            {
+                var p = paths[n];
+                var folder = relative.Contains(n) ? Path.Combine(iniDir, p.Replace('/', '\\')) : p;
+                b.Profiles.Add(new BrowserProfile { Id = p, Name = n, Folder = folder });
+            }
         }
 
         /// <summary>Reads a file the browser may have open for writing.</summary>

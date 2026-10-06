@@ -150,7 +150,7 @@
                                         <TextBlock Text="{Binding Domain}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                             <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
-                                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Label}" ToolTip="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                         </StackPanel>
                                         <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="{local:Tr Rules.Remove}"
                                                 Click="RemoveRule_Click" Tag="{Binding}" />

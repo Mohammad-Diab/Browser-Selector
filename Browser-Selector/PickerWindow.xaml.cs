@@ -25,11 +25,14 @@ namespace BrowserSelector
         readonly AppSettings settings;
         readonly List<PickerItem> items;
 
-        // Closing when focus moves elsewhere, like a context menu, with two exceptions (see OnDeactivated).
+        // Closes when another window comes to the foreground, like a context menu (see OnForegroundChanged).
         static readonly TimeSpan FocusGrace = TimeSpan.FromMilliseconds(600);
         DateTime shownAt = DateTime.MaxValue;
-        bool keepOpen;   // our own message box or settings window is taking the focus
+        bool keepOpen;      // our own message box or settings window is taking the focus
         bool closing;
+        bool stolenEarly;   // another app took the foreground during the grace period
+        IntPtr hook;
+        Native.WinEventProc foregroundProc; // kept in a field so the GC doesn't collect the callback
 
         public PickerWindow(string link, List<Browser> browsers, AppSettings settings)
         {
@@ -59,24 +62,47 @@ namespace BrowserSelector
                 NoBrowsers.Visibility = Visibility.Visible;
                 PrivateBox.Visibility = RememberBox.Visibility = HintText.Visibility = Visibility.Collapsed;
             }
-            if (host == null) RememberBox.Visibility = Visibility.Collapsed;
+            // A rule for a host without a dot ("localhost", or "com" from www.com) would be meaningless or far too broad.
+            if (host == null || !host.Contains(".")) RememberBox.Visibility = Visibility.Collapsed;
             else RememberBox.Content = new TextBlock { Text = Loc.F("Picker.Remember", host), TextTrimming = TextTrimming.CharacterEllipsis };
 
             TitleBar.MouseLeftButtonDown += (s, e) => { if (e.ButtonState == MouseButtonState.Pressed) DragMove(); };
-            SourceInitialized += (s, e) => { Theme.StyleWindow(this, roundCorners: true); PlaceNearCursor(); };
+            SourceInitialized += (s, e) =>
+            {
+                Theme.StyleWindow(this, roundCorners: true);
+                PlaceNearCursor();
+                foregroundProc = OnForegroundChanged;
+                hook = Native.SetWinEventHook(Native.EVENT_SYSTEM_FOREGROUND, Native.EVENT_SYSTEM_FOREGROUND,
+                    IntPtr.Zero, foregroundProc, 0, 0, Native.WINEVENT_OUTOFCONTEXT);
+            };
             Loaded += (s, e) => FocusSelected();
-            ContentRendered += (s, e) => shownAt = DateTime.UtcNow;
+            ContentRendered += (s, e) =>
+            {
+                shownAt = DateTime.UtcNow;
+                // If an app grabbed the foreground right away, try once more to get it back for the keyboard.
+                var retry = new DispatcherTimer { Interval = FocusGrace };
+                retry.Tick += (_, __) =>
+                {
+                    retry.Stop();
+                    if (stolenEarly && !closing && Native.GetForegroundWindow() != Handle) FocusSelected();
+                };
+                retry.Start();
+            };
         }
 
+        IntPtr Handle => new WindowInteropHelper(this).Handle;
+
         /// <summary>
-        /// Focus went to another window: the user moved on, so close. Not when it happens right after the
-        /// picker appears (apps like Outlook or Teams take the focus back after opening a link; the picker
-        /// then stays visible on top and closes on the next focus loss), and not for our own dialogs.
+        /// Another window came to the foreground: the user moved on, so close. Watching the foreground (not just
+        /// our own deactivation) also covers the picker being left inactive. Exceptions: our own message boxes,
+        /// and the first moments after the picker appears, when apps like Outlook or Teams take the foreground
+        /// back after opening a link; the picker stays on top then and closes on the next change.
         /// </summary>
-        protected override void OnDeactivated(EventArgs e)
+        void OnForegroundChanged(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time)
         {
-            base.OnDeactivated(e);
-            if (keepOpen || closing || DateTime.UtcNow - shownAt < FocusGrace) return;
+            var me = Handle;
+            if (closing || keepOpen || hwnd == me || Native.GetWindow(hwnd, Native.GW_OWNER) == me) return;
+            if (DateTime.UtcNow - shownAt < FocusGrace) { stolenEarly = true; return; }
             Dispatcher.BeginInvoke(new Action(() => { if (!closing) Close(); }));
         }
 
@@ -84,6 +110,12 @@ namespace BrowserSelector
         {
             closing = true;
             base.OnClosing(e);
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            if (hook != IntPtr.Zero) Native.UnhookWinEvent(hook);
+            base.OnClosed(e);
         }
 
         /// <summary>Puts the window next to the mouse, inside the work area of the monitor under it.</summary>
@@ -164,16 +196,20 @@ namespace BrowserSelector
                 Activate();
                 return;
             }
-            if (RememberBox.IsChecked == true && host != null)
+            if (RememberBox.IsChecked == true && RememberBox.Visibility == Visibility.Visible)
             {
                 try
                 {
-                    var fresh = AppSettings.Load(); // keep changes made in an open settings window
-                    fresh.SetRule(host, option.ToTarget());
-                    fresh.Save();
-                    settings.Rules = fresh.Rules;
+                    var target = option.ToTarget();
+                    settings.Rules = AppSettings.Update(s => s.SetRule(host, target)).Rules;
                 }
-                catch { /* the link is open; losing the rule is not worth an error */ }
+                catch (Exception ex)
+                {
+                    // The link is open, but say that the rule wasn't saved instead of losing it quietly.
+                    keepOpen = true;
+                    MessageBox.Show(this, Loc.F("Error.RuleNotSaved", host, ex.Message), Loc.T("Error.Title"),
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
             Close();
         }

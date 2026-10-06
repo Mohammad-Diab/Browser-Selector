@@ -35,7 +35,7 @@ namespace BrowserSelector
 
     public partial class SettingsWindow : Window
     {
-        readonly AppSettings settings = AppSettings.Load();
+        AppSettings settings = AppSettings.Load();
         List<Browser> browsers;
         bool loading;
 
@@ -94,14 +94,19 @@ namespace BrowserSelector
 
         void ReloadRules()
         {
-            settings.Rules = AppSettings.Load().Rules; // the picker may have added some
+            // The picker may have added some. A file that is locked right now keeps what we already show.
+            var fresh = AppSettings.Load();
+            App.TellIfSettingsSetAside(this);
+            if (!fresh.Unreadable) settings.Rules = fresh.Rules;
             RulesList.ItemsSource = settings.Rules.Select(r =>
             {
                 var o = BrowserOption.Resolve(browsers, r.Target);
-                var label = o == null ? $"{r.Target.Browser} ({Loc.T("Rules.Missing")})" : o.Label;
-                if (o != null && o.Profile == null && !string.IsNullOrEmpty(r.Target.Profile)) label += " · " + r.Target.Profile;
+                var b = browsers.FirstOrDefault(x => x.Id == r.Target.Browser);
+                var label = o != null ? o.Label
+                    : b == null ? $"{r.Target.Browser} ({Loc.T("Rules.Missing")})"
+                    : $"{b.Name} · {r.Target.Profile} ({Loc.T("Rules.ProfileMissing")})";
                 if (r.Target.Private) label += $" ({Loc.T("Rules.Private")})";
-                return new RuleItem { Rule = r, Icon = o?.Browser.Icon, Label = label };
+                return new RuleItem { Rule = r, Icon = (o?.Browser ?? b)?.Icon, Label = label };
             }).ToList();
             RulesEmpty.Visibility = settings.Rules.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
@@ -119,10 +124,22 @@ namespace BrowserSelector
             UnregisterButton.IsEnabled = status != Registration.Status.NotRegistered;
         }
 
-        void Save()
+        /// <summary>
+        /// Applies one change to the saved settings (re-read under a lock, so rules the picker added meanwhile
+        /// survive) and shows the result here. False, after telling the user, when the file can't be written.
+        /// </summary>
+        bool Change(Action<AppSettings> apply)
         {
-            try { settings.Save(); }
-            catch (Exception ex) { MessageBox.Show(this, ex.Message, Loc.T("Error.Title"), MessageBoxButton.OK, MessageBoxImage.Error); }
+            try
+            {
+                settings = AppSettings.Update(apply);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, Loc.T("Error.Title"), MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
         }
 
         void Register_Click(object sender, RoutedEventArgs e)
@@ -159,18 +176,21 @@ namespace BrowserSelector
         void DefaultCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (loading) return;
-            settings.DefaultTarget = (DefaultCombo.SelectedItem as OptionItem)?.Option?.ToTarget();
-            Save();
+            var target = (DefaultCombo.SelectedItem as OptionItem)?.Option?.ToTarget();
+            Change(s => s.DefaultTarget = target);
         }
 
         void OpenMode_Checked(object sender, RoutedEventArgs e)
         {
             if (loading) return;
-            settings.AskEveryTime = AskRadio.IsChecked == true;
-            // Save the main browser the combo shows, so "open without asking" never depends on list order.
-            if (settings.DefaultTarget == null)
-                settings.DefaultTarget = (DefaultCombo.SelectedItem as OptionItem)?.Option?.ToTarget();
-            Save();
+            bool ask = AskRadio.IsChecked == true;
+            var shown = (DefaultCombo.SelectedItem as OptionItem)?.Option?.ToTarget();
+            Change(s =>
+            {
+                s.AskEveryTime = ask;
+                // Save the main browser the combo shows, so "open without asking" never depends on list order.
+                if (s.DefaultTarget == null) s.DefaultTarget = shown;
+            });
         }
 
         void EditRules_Click(object sender, RoutedEventArgs e) => Tabs.SelectedIndex = 1;
@@ -180,16 +200,16 @@ namespace BrowserSelector
 
         void ShowProfiles_Click(object sender, RoutedEventArgs e)
         {
-            settings.ShowProfiles = ShowProfilesBox.IsChecked == true;
-            Save();
+            bool show = ShowProfilesBox.IsChecked == true;
+            Change(s => s.ShowProfiles = show);
         }
 
         void Language_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (loading) return;
-            settings.Language = new[] { "auto", "en", "ar" }[LanguageCombo.SelectedIndex];
-            Save();
-            Loc.Init(settings.Language);
+            var language = new[] { "auto", "en", "ar" }[LanguageCombo.SelectedIndex];
+            if (!Change(s => s.Language = language)) return;
+            Loc.Init(language);
             // Rebuild the window so every string and the layout direction follow the new language.
             var w = new SettingsWindow(Tabs.SelectedIndex, AdvancedToggle.IsChecked == true)
             {
@@ -226,8 +246,8 @@ namespace BrowserSelector
                 {
                     Launcher.Open(option, link);
                     var label = option.Label + (option.Private ? $" ({Loc.T("Rules.Private")})" : "");
-                    ShowTryResult(reason == Launcher.RouteReason.Rule ? Loc.F("Gen.RuleMatched", rule.Domain, label)
-                        : rule != null ? Loc.F("Gen.RuleMissingMain", rule.Domain, label)
+                    ShowTryResult(reason == Launcher.RouteReason.Rule
+                        ? Loc.F("Gen.RuleMatched", rule.Domain, label)
                         : Loc.F("Gen.MainOpened", host, label));
                     return;
                 }
@@ -236,7 +256,9 @@ namespace BrowserSelector
                     MessageBox.Show(this, Loc.F("Error.Launch", option.Browser.Name, ex.Message), Loc.T("Error.Title"), MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
-            ShowTryResult(rule != null ? Loc.F("Gen.RuleMissing", rule.Domain) : Loc.F("Gen.NoRule", host));
+            ShowTryResult(reason == Launcher.RouteReason.RuleUnavailable ? Loc.F("Gen.RuleMissing", rule.Domain)
+                : reason == Launcher.RouteReason.MainUnavailable ? Loc.T("Gen.MainMissing")
+                : Loc.F("Gen.NoRule", host));
             new PickerWindow(link, browsers, fresh).Show();
         }
 
@@ -255,9 +277,7 @@ namespace BrowserSelector
 
             var target = option.ToTarget();
             target.Private = RulePrivate.IsChecked == true;
-            settings.Rules = AppSettings.Load().Rules;
-            settings.SetRule(domain, target);
-            Save();
+            if (!Change(s => s.SetRule(domain, target))) return;
             RuleDomain.Clear();
             RulePrivate.IsChecked = false;
             ReloadRules();
@@ -271,9 +291,7 @@ namespace BrowserSelector
         void RemoveRule_Click(object sender, RoutedEventArgs e)
         {
             if (!(((FrameworkElement)sender).Tag is RuleItem item)) return;
-            settings.Rules = AppSettings.Load().Rules;
-            settings.Rules.RemoveAll(r => r.Domain == item.Domain);
-            Save();
+            Change(s => s.Rules.RemoveAll(r => r.Domain == item.Domain));
             ReloadRules();
         }
 

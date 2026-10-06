@@ -16,7 +16,7 @@ namespace BrowserSelector
         public static object Parse(string text)
         {
             int i = 0;
-            var value = ReadValue(text, ref i);
+            var value = ReadValue(text, ref i, 0);
             SkipSpace(text, ref i);
             if (i != text.Length) throw Error(i);
             return value;
@@ -31,14 +31,18 @@ namespace BrowserSelector
 
         // ---- reading
 
-        static object ReadValue(string s, ref int i)
+        // Real files nest a few levels deep; the cap keeps a broken or hostile file from overflowing the stack.
+        const int MaxDepth = 256;
+
+        static object ReadValue(string s, ref int i, int depth)
         {
+            if (depth > MaxDepth) throw new FormatException("JSON nested too deeply");
             SkipSpace(s, ref i);
             if (i >= s.Length) throw Error(i);
             switch (s[i])
             {
-                case '{': return ReadObject(s, ref i);
-                case '[': return ReadArray(s, ref i);
+                case '{': return ReadObject(s, ref i, depth);
+                case '[': return ReadArray(s, ref i, depth);
                 case '"': return ReadString(s, ref i);
                 case 't': Expect(s, ref i, "true"); return true;
                 case 'f': Expect(s, ref i, "false"); return false;
@@ -47,7 +51,7 @@ namespace BrowserSelector
             }
         }
 
-        static Dictionary<string, object> ReadObject(string s, ref int i)
+        static Dictionary<string, object> ReadObject(string s, ref int i, int depth)
         {
             var obj = new Dictionary<string, object>();
             i++; // {
@@ -61,7 +65,7 @@ namespace BrowserSelector
                 SkipSpace(s, ref i);
                 if (i >= s.Length || s[i] != ':') throw Error(i);
                 i++;
-                obj[key] = ReadValue(s, ref i);
+                obj[key] = ReadValue(s, ref i, depth + 1);
                 SkipSpace(s, ref i);
                 if (i >= s.Length) throw Error(i);
                 if (s[i] == ',') { i++; continue; }
@@ -70,7 +74,7 @@ namespace BrowserSelector
             }
         }
 
-        static List<object> ReadArray(string s, ref int i)
+        static List<object> ReadArray(string s, ref int i, int depth)
         {
             var list = new List<object>();
             i++; // [
@@ -78,7 +82,7 @@ namespace BrowserSelector
             if (i < s.Length && s[i] == ']') { i++; return list; }
             while (true)
             {
-                list.Add(ReadValue(s, ref i));
+                list.Add(ReadValue(s, ref i, depth + 1));
                 SkipSpace(s, ref i);
                 if (i >= s.Length) throw Error(i);
                 if (s[i] == ',') { i++; continue; }

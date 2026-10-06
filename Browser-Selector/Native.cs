@@ -47,6 +47,26 @@ namespace BrowserSelector
         public static extern bool SetForegroundWindow(IntPtr hwnd);
 
         [DllImport("user32.dll")]
+        public static extern IntPtr GetForegroundWindow();
+
+        public const uint GW_OWNER = 4;
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetWindow(IntPtr hwnd, uint cmd);
+
+        public const uint EVENT_SYSTEM_FOREGROUND = 3;
+        public const uint WINEVENT_OUTOFCONTEXT = 0;
+
+        public delegate void WinEventProc(IntPtr hook, uint evt, IntPtr hwnd, int idObject, int idChild, uint thread, uint time);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr module, WinEventProc proc,
+            uint processId, uint threadId, uint flags);
+
+        [DllImport("user32.dll")]
+        public static extern bool UnhookWinEvent(IntPtr hook);
+
+        [DllImport("user32.dll")]
         static extern short GetAsyncKeyState(int key);
 
         /// <summary>Whether Shift is held right now (works before any window exists).</summary>

@@ -28,16 +28,43 @@ namespace BrowserSelector
 
         public static Status GetStatus(string exe)
         {
-            using (var cmd = Registry.CurrentUser.OpenSubKey(@"Software\Classes\" + UrlProgId + @"\shell\open\command"))
-            using (var apps = Registry.CurrentUser.OpenSubKey(RegisteredApps))
+            try
             {
-                var value = cmd?.GetValue("") as string;
-                if (value == null || apps?.GetValue(AppName) == null) return Status.NotRegistered;
-                return BrowserCatalog.SplitCommand(value, out var registered, out _)
-                       && string.Equals(Path.GetFullPath(registered), Path.GetFullPath(exe), StringComparison.OrdinalIgnoreCase)
-                    ? Status.Registered
-                    : Status.OtherPath;
+                using (var apps = Registry.CurrentUser.OpenSubKey(RegisteredApps))
+                {
+                    var registered = RegisteredExe();
+                    if (registered == null || apps?.GetValue(AppName) == null) return Status.NotRegistered;
+                    return SamePath(registered, exe) ? Status.Registered : Status.OtherPath;
+                }
             }
+            catch
+            {
+                return Status.OtherPath; // a malformed value: offer to register again
+            }
+        }
+
+        /// <summary>The exe the registration points at, or null when not registered.</summary>
+        static string RegisteredExe()
+        {
+            using (var cmd = Registry.CurrentUser.OpenSubKey(@"Software\Classes\" + UrlProgId + @"\shell\open\command"))
+                return BrowserCatalog.SplitCommand(cmd?.GetValue("") as string, out var registered, out _) ? registered : null;
+        }
+
+        static bool SamePath(string a, string b) =>
+            string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// --unregister: removes the registration only when it belongs to this copy, or to a copy that no longer
+        /// exists. So uninstalling the installed copy doesn't unregister a portable copy the user switched to.
+        /// </summary>
+        public static bool UnregisterIfOurs(string exe)
+        {
+            string registered;
+            try { registered = RegisteredExe(); }
+            catch { registered = null; }
+            if (registered != null && File.Exists(registered) && !SamePath(registered, exe)) return false;
+            Unregister();
+            return true;
         }
 
         /// <summary>True when Windows currently sends web links to this app.</summary>
@@ -60,8 +87,8 @@ namespace BrowserSelector
             var icon = $"\"{exe}\",0";
             var open = $"\"{exe}\" \"%1\"";
 
-            WriteProgId(UrlProgId, AppName + " URL", icon, open, isUrl: true);
-            WriteProgId(HtmlProgId, AppName + " HTML Document", icon, open, isUrl: false);
+            WriteProgId(UrlProgId, AppName + " URL", icon, open);
+            WriteProgId(HtmlProgId, AppName + " HTML Document", icon, open);
 
             using (var client = Registry.CurrentUser.CreateSubKey(ClientKey))
             {
@@ -100,8 +127,13 @@ namespace BrowserSelector
             using (var apps = hkcu.OpenSubKey(RegisteredApps, true))
                 apps?.DeleteValue(AppName, false);
             foreach (var e in Extensions)
+            {
                 using (var k = hkcu.OpenSubKey($@"Software\Classes\{e}\OpenWithProgids", true))
                     k?.DeleteValue(HtmlProgId, false);
+                // Don't leave behind empty keys that registering may have created.
+                DeleteIfEmpty(hkcu, $@"Software\Classes\{e}\OpenWithProgids");
+                DeleteIfEmpty(hkcu, $@"Software\Classes\{e}");
+            }
 
             NotifyShell();
         }
@@ -115,13 +147,24 @@ namespace BrowserSelector
             });
         }
 
-        static void WriteProgId(string progId, string friendlyName, string icon, string open, bool isUrl)
+        static void DeleteIfEmpty(RegistryKey root, string path)
+        {
+            using (var k = root.OpenSubKey(path))
+            {
+                if (k == null || k.ValueCount > 0 || k.SubKeyCount > 0) return;
+            }
+            root.DeleteSubKey(path, false);
+        }
+
+        static void WriteProgId(string progId, string friendlyName, string icon, string open)
         {
             using (var key = Registry.CurrentUser.CreateSubKey(@"Software\Classes\" + progId))
             {
                 key.SetValue("", friendlyName);
                 key.SetValue("FriendlyTypeName", friendlyName);
-                if (isUrl) key.SetValue("URL Protocol", "");
+                // No "URL Protocol": the ProgID only needs to be named by URLAssociations. With it, a web page
+                // could launch "browserselectorurl:..." links (older versions wrote it; remove it on upgrade).
+                key.DeleteValue("URL Protocol", false);
                 using (var k = key.CreateSubKey("DefaultIcon")) k.SetValue("", icon);
                 using (var k = key.CreateSubKey(@"shell\open\command")) k.SetValue("", open);
                 using (var app = key.CreateSubKey("Application"))

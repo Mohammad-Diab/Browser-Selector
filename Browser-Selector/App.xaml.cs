@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace BrowserSelector
 {
@@ -14,6 +15,7 @@ namespace BrowserSelector
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            DispatcherUnhandledException += OnUnhandledException;
             var settings = Program.Settings ?? AppSettings.Load();
             Loc.Init(settings.Language);
             Theme.Apply(Resources);
@@ -24,12 +26,14 @@ namespace BrowserSelector
                 try
                 {
                     if (args[0] == "--register") Registration.Register(BrowserCatalog.SelfPath);
-                    else Registration.Unregister();
+                    else Registration.UnregisterIfOurs(BrowserCatalog.SelfPath);
                     Shutdown(0);
                 }
                 catch { Shutdown(1); }
                 return;
             }
+
+            TellIfSettingsSetAside(null);
 
             if (args.Length == 0)
             {
@@ -60,6 +64,29 @@ namespace BrowserSelector
                 catch { /* the browser failed to start: let the user pick another one */ }
             }
             new PickerWindow(link, browsers, settings).Show();
+        }
+
+        static bool setAsideShown;
+
+        /// <summary>Once per run: say that a broken settings.json was moved aside (kept, not deleted) and defaults are in use.</summary>
+        public static void TellIfSettingsSetAside(Window owner)
+        {
+            if (setAsideShown || AppSettings.SetAsidePath == null) return;
+            setAsideShown = true;
+            var text = Loc.F("Error.SetAside", AppSettings.SetAsidePath);
+            if (owner != null) MessageBox.Show(owner, text, Loc.T("Error.Title"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            else MessageBox.Show(text, Loc.T("Error.Title"), MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        /// <summary>A bug must not lose the link: show the error with the link (Ctrl+C copies the message), then quit.</summary>
+        void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+        {
+            e.Handled = true;
+            var text = Program.Link == null
+                ? Loc.F("Error.Crash", e.Exception.Message)
+                : Loc.F("Error.CrashLink", e.Exception.Message, Program.Link);
+            try { MessageBox.Show(text, Loc.T("Error.Title"), MessageBoxButton.OK, MessageBoxImage.Error); }
+            finally { Shutdown(1); }
         }
     }
 }

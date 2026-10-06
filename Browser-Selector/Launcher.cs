@@ -35,12 +35,23 @@ namespace BrowserSelector
             return list;
         }
 
-        /// <summary>Resolves a saved target against the installed browsers; null when the browser is gone.</summary>
+        /// <summary>
+        /// Resolves a saved target against the installed browsers. Null when the browser is gone, or when the target
+        /// names a profile that can't be found: profiles are usually how people keep work and personal apart, so
+        /// opening some other profile instead would be worse than asking.
+        /// </summary>
         public static BrowserOption Resolve(IEnumerable<Browser> browsers, Target t)
         {
             var b = t == null ? null : browsers.FirstOrDefault(x => x.Id == t.Browser);
             if (b == null) return null;
-            var p = string.IsNullOrEmpty(t.Profile) ? null : b.Profiles.FirstOrDefault(x => x.Id == t.Profile);
+            BrowserProfile p = null;
+            if (!string.IsNullOrEmpty(t.Profile))
+            {
+                // Firefox profiles were saved by name before 0.1.0-beta.3; they are saved by folder now.
+                p = b.Profiles.FirstOrDefault(x => x.Id == t.Profile)
+                    ?? (b.Family == BrowserFamily.Firefox ? b.Profiles.FirstOrDefault(x => x.Name == t.Profile) : null);
+                if (p == null) return null;
+            }
             return new BrowserOption { Browser = b, Profile = p, Private = t.Private };
         }
     }
@@ -48,55 +59,74 @@ namespace BrowserSelector
     public static class Launcher
     {
         /// <summary>
-        /// Accepts only what a browser should get: an absolute URL with a scheme, or an existing local file.
-        /// This also keeps a "link" like "--some-switch" from reaching the browser as a command-line switch.
+        /// Accepts only what a browser should get: an http or https link, or a local file (a path or a file: URI).
+        /// Everything else is refused: javascript:, data:, chrome:, other apps' schemes, network (UNC) files, and
+        /// anything that could reach the browser as a command-line switch.
         /// </summary>
         public static bool TryNormalize(string input, out string link)
         {
             link = null;
             if (string.IsNullOrWhiteSpace(input)) return false;
             input = input.Trim();
-            try
+            if (input.Any(char.IsControl)) return false;
+            bool http = input.StartsWith("http:", StringComparison.OrdinalIgnoreCase)
+                        || input.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
+            if (!http && !input.StartsWith(@"\\", StringComparison.Ordinal))
             {
-                if (Path.IsPathRooted(input) && File.Exists(input)) { link = Path.GetFullPath(input); return true; }
+                try
+                {
+                    if (Path.IsPathRooted(input) && File.Exists(input)) { link = Path.GetFullPath(input); return true; }
+                }
+                catch { /* not a path */ }
             }
-            catch { /* not a path */ }
-            if (Uri.TryCreate(input, UriKind.Absolute, out var uri) && char.IsLetter(input[0])
-                && (!uri.IsFile || File.Exists(uri.LocalPath)))
+            if (Uri.TryCreate(input, UriKind.Absolute, out var uri))
             {
-                link = input;
-                return true;
+                bool ok = uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps
+                          || (uri.IsFile && !uri.IsUnc && File.Exists(uri.LocalPath));
+                if (ok) link = input;
+                return ok;
             }
+            // Links .NET can't parse but browsers repair or search ("http:example.com", a space in the host):
+            // pass them on. They have no host, so no rule matches them.
+            if (http) { link = input; return true; }
             return false;
         }
 
-        /// <summary>The host of a web link without "www.", or null for files and other schemes.</summary>
+        /// <summary>The host of a web link, cleaned like rule domains (see AppSettings.CleanHost); null for files.</summary>
         public static string HostOf(string link)
         {
             if (!Uri.TryCreate(link, UriKind.Absolute, out var uri)) return null;
             if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) return null;
-            var host = uri.IdnHost.ToLowerInvariant();
-            return host.StartsWith("www.") ? host.Substring(4) : host;
+            var host = AppSettings.CleanHost(uri.IdnHost);
+            return host.Length > 0 ? host : null;
         }
 
-        public enum RouteReason { Rule, MainBrowser, Ask }
+        public enum RouteReason { Rule, RuleUnavailable, MainBrowser, MainUnavailable, Ask }
 
         /// <summary>
         /// What a click on the link should open without asking: the browser of a matching site rule, else the
-        /// main browser when the user chose not to be asked. Null means show the picker. <paramref name="rule"/>
-        /// is the matching rule even when its browser is gone.
+        /// main browser when the user chose not to be asked. Null means show the picker, which is also the answer
+        /// whenever a rule or the main browser can't be followed exactly as saved (browser or profile missing).
         /// </summary>
         public static BrowserOption Route(string link, IList<Browser> browsers, AppSettings settings,
             out SiteRule rule, out RouteReason reason)
         {
             rule = settings.FindRule(HostOf(link));
-            var option = rule == null ? null : BrowserOption.Resolve(browsers, rule.Target);
-            if (option != null) { reason = RouteReason.Rule; return option; }
+            if (rule != null)
+            {
+                var option = BrowserOption.Resolve(browsers, rule.Target);
+                reason = option != null ? RouteReason.Rule : RouteReason.RuleUnavailable;
+                return option;
+            }
 
             if (!settings.AskEveryTime && browsers.Count > 0)
             {
-                reason = RouteReason.MainBrowser;
-                return BrowserOption.Resolve(browsers, settings.DefaultTarget) ?? new BrowserOption { Browser = browsers[0] };
+                // No main browser saved yet: the first one is what the settings window shows.
+                var main = settings.DefaultTarget == null
+                    ? new BrowserOption { Browser = browsers[0] }
+                    : BrowserOption.Resolve(browsers, settings.DefaultTarget);
+                reason = main != null ? RouteReason.MainBrowser : RouteReason.MainUnavailable;
+                return main;
             }
             reason = RouteReason.Ask;
             return null;
@@ -109,7 +139,8 @@ namespace BrowserSelector
             if (o.Profile != null)
             {
                 if (o.Browser.Family == BrowserFamily.Chromium) args.Add(Quote("--profile-directory=" + o.Profile.Id));
-                else if (o.Browser.Family == BrowserFamily.Firefox) args.Add("-P " + Quote(o.Profile.Id));
+                else if (o.Browser.Family == BrowserFamily.Firefox)
+                    args.Add(o.Profile.Folder != null ? "-profile " + Quote(o.Profile.Folder) : "-P " + Quote(o.Profile.Name));
             }
             if (o.Private && !string.IsNullOrEmpty(o.Browser.PrivateArg)) args.Add(o.Browser.PrivateArg);
             if (link != null) args.Add(Quote(link.Replace("\"", "%22")));
