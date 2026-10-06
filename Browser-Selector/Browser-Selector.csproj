@@ -16,7 +16,7 @@
     <DebugType>none</DebugType>
 
     <Version>0.1.0</Version>
-    <InformationalVersion>0.1.0-beta.1</InformationalVersion>
+    <InformationalVersion>0.1.0-beta.2</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Product>Browser Selector</Product>
     <AssemblyTitle>Browser Selector</AssemblyTitle>
