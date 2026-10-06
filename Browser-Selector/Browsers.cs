@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -256,14 +255,12 @@ namespace BrowserSelector
             var file = dir == null ? null : Path.Combine(dir, "Local State");
             if (file == null || !File.Exists(file)) return;
 
-            var json = new JavaScriptSerializer { MaxJsonLength = int.MaxValue, RecursionLimit = 1000 };
-            if (!(json.DeserializeObject(ReadShared(file)) is Dictionary<string, object> state)) return;
-            if (!(state.TryGetValue("profile", out var p) && p is Dictionary<string, object> profile)) return;
-            if (!(profile.TryGetValue("info_cache", out var c) && c is Dictionary<string, object> cache)) return;
+            var profile = (Json.Parse(ReadShared(file)) as Dictionary<string, object>).Obj("profile");
+            var cache = profile.Obj("info_cache");
+            if (cache == null) return;
 
             var order = new List<string>();
-            if (profile.TryGetValue("profiles_order", out var o) && o is object[] arr)
-                order.AddRange(arr.OfType<string>());
+            order.AddRange((profile.Arr("profiles_order") ?? new List<object>()).OfType<string>());
             foreach (var k in cache.Keys.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
                 if (!order.Contains(k)) order.Add(k);
 

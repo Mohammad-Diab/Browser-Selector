@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace BrowserSelector
 {
@@ -22,7 +23,13 @@ namespace BrowserSelector
             var a = args.Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
             if (a.Length > 0 && !a[0].StartsWith("--", StringComparison.Ordinal) && OpenWithoutUi(string.Join(" ", a)))
                 return 0;
+            return RunApp();
+        }
 
+        // Separate and never inlined: compiling Main must not pull in the WPF assemblies that App needs.
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        static int RunApp()
+        {
             var app = new App();
             app.InitializeComponent();
             return app.Run();
