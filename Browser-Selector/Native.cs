@@ -22,6 +22,7 @@ namespace BrowserSelector
         }
 
         public const uint MONITOR_DEFAULTTONEAREST = 2;
+        public const uint SWP_NOSIZE = 0x0001;
         public const uint SWP_NOZORDER = 0x0004;
         public const uint SWP_NOACTIVATE = 0x0010;
         public const int SHCNE_ASSOCCHANGED = 0x08000000;
