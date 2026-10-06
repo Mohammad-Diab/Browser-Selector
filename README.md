@@ -69,7 +69,7 @@ Site rules apply in both cases.
 | `Enter` | Open with the highlighted entry (it starts on your main browser; arrows move it) |
 | `Shift` + number, `Shift` + `Enter`, `Shift` + click | Open in a private window |
 | `Ctrl` + `C` | Copy the link |
-| `Esc` | Close without opening anything |
+| `Esc`, or click anywhere else | Close without opening anything |
 
 The **Try it** box under **Settings → General → Advanced options** tests any link without changing
 anything in Windows: **Open picker** always asks, and **Open like a link** does what a real click

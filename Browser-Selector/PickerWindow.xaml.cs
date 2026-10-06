@@ -25,6 +25,12 @@ namespace BrowserSelector
         readonly AppSettings settings;
         readonly List<PickerItem> items;
 
+        // Closing when focus moves elsewhere, like a context menu, with two exceptions (see OnDeactivated).
+        static readonly TimeSpan FocusGrace = TimeSpan.FromMilliseconds(600);
+        DateTime shownAt = DateTime.MaxValue;
+        bool keepOpen;   // our own message box or settings window is taking the focus
+        bool closing;
+
         public PickerWindow(string link, List<Browser> browsers, AppSettings settings)
         {
             InitializeComponent();
@@ -59,6 +65,25 @@ namespace BrowserSelector
             TitleBar.MouseLeftButtonDown += (s, e) => { if (e.ButtonState == MouseButtonState.Pressed) DragMove(); };
             SourceInitialized += (s, e) => { Theme.StyleWindow(this, roundCorners: true); PlaceNearCursor(); };
             Loaded += (s, e) => FocusSelected();
+            ContentRendered += (s, e) => shownAt = DateTime.UtcNow;
+        }
+
+        /// <summary>
+        /// Focus went to another window: the user moved on, so close. Not when it happens right after the
+        /// picker appears (apps like Outlook or Teams take the focus back after opening a link; the picker
+        /// then stays visible on top and closes on the next focus loss), and not for our own dialogs.
+        /// </summary>
+        protected override void OnDeactivated(EventArgs e)
+        {
+            base.OnDeactivated(e);
+            if (keepOpen || closing || DateTime.UtcNow - shownAt < FocusGrace) return;
+            Dispatcher.BeginInvoke(new Action(() => { if (!closing) Close(); }));
+        }
+
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            closing = true;
+            base.OnClosing(e);
         }
 
         /// <summary>Puts the window next to the mouse, inside the work area of the monitor under it.</summary>
@@ -132,8 +157,11 @@ namespace BrowserSelector
             }
             catch (Exception ex)
             {
+                keepOpen = true; // so the user can pick another browser after reading the error
                 MessageBox.Show(this, Loc.F("Error.Launch", option.Browser.Name, ex.Message), Loc.T("Error.Title"),
                     MessageBoxButton.OK, MessageBoxImage.Error);
+                keepOpen = false;
+                Activate();
                 return;
             }
             if (RememberBox.IsChecked == true && host != null)
@@ -167,6 +195,7 @@ namespace BrowserSelector
 
         void Settings_Click(object sender, RoutedEventArgs e)
         {
+            keepOpen = true; // the settings window takes the focus; we close ourselves right after
             new SettingsWindow().Show();
             Close();
         }
