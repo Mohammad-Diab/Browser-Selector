@@ -36,26 +36,25 @@ Download from the [latest release](https://github.com/Mohammad-Diab/Browser-Sele
 | --- | --- |
 | `BrowserSelector-Setup-<version>.exe` | **Most people.** Installs for your user only (no admin), registers the app, adds a Start menu entry, and uninstalls cleanly from Apps & Features. |
 | `BrowserSelector-<version>-portable.7z` | You'd rather not run an installer: the app, its license and short notes in a folder. |
-| `BrowserSelector.exe` | You just want the exe. |
 
 The files are not signed, so SmartScreen may warn you: choose **More info** → **Run anyway**.
 
-With the portable copy or the plain exe, put it in a folder where it can stay: Windows remembers
-the exe's path when you register, so after moving it, register again.
+With the portable copy, put the folder where it can stay: Windows remembers the exe's path when
+you register, so after moving it, register again.
 
 ## Make it your default browser
 
 Windows doesn't let apps make themselves the default browser, so this takes two clicks from you:
 
 1. **Setup:** keep "Choose Browser Selector as my default browser now" ticked on the last page.
-   **Portable / exe:** run `BrowserSelector.exe` (with no link it opens its settings) and click **Register**.
+   **Portable:** run `BrowserSelector.exe` (with no link it opens its settings) and click **Register**.
 2. Windows opens **Settings → Apps → Default apps** (`ms-settings:defaultapps`).
    - **Windows 11:** select **Browser Selector**, then click **Set default** at the top.
    - **Windows 10:** under **Web browser**, click the current browser and choose **Browser Selector**.
 3. Back in Browser Selector, the status reads "It is your default browser".
 
 To stop using it, choose another default browser in Default apps, then uninstall it from
-**Apps & Features** (Setup), or click **Unregister** and delete the folder (portable / exe).
+**Apps & Features** (Setup), or click **Unregister** and delete the folder (portable).
 Uninstalling removes the registration, and asks whether to delete your settings and site rules too.
 `--unregister` only removes a registration that belongs to that copy (or to a copy that no longer exists).
 From a script: `BrowserSelector.exe --register` and `BrowserSelector.exe --unregister`.
@@ -150,7 +149,7 @@ dotnet build Browser-Selector.sln -c Release
 
 The app is `Browser-Selector\bin\Release\net48\BrowserSelector.exe`.
 
-To build all release files (exe, portable 7z and Setup) into `release\`, with
+To build the release files (portable 7z and Setup) into `release\`, with
 [7-Zip](https://www.7-zip.org/) and [Inno Setup 6](https://jrsoftware.org/isinfo.php)
 (`winget install JRSoftware.InnoSetup`) installed:
 

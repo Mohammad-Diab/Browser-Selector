@@ -1,6 +1,5 @@
 <#
   Builds the release files into .\release (or -OutDir):
-    BrowserSelector.exe                         the app (portable, one file)
     BrowserSelector-<version>-portable.7z       the app in a folder, no installer
     BrowserSelector-Setup-<version>.exe         per-user installer (Inno Setup 6)
   The version comes from <InformationalVersion> in Browser-Selector.csproj.
@@ -28,7 +27,6 @@ $exe = Join-Path $root "Browser-Selector\bin\Release\net48\BrowserSelector.exe"
 
 New-Item -ItemType Directory -Force $OutDir | Out-Null
 $OutDir = Resolve-Path $OutDir
-Copy-Item $exe $OutDir -Force
 
 # Portable: a folder with the exe, license and notes. Settings go to %APPDATA%\BrowserSelector like any copy.
 $stage = Join-Path ([IO.Path]::GetTempPath()) ("bs-portable-" + [Guid]::NewGuid().ToString("N"))
