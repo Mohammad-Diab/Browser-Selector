@@ -14,10 +14,12 @@ can skip the question.
 
 ## Features
 
+- **One simple choice**: ask every time, or open links in your main browser without asking, with
+  site rules as the exceptions. Everything else waits under "Advanced options".
 - **Finds your browsers by itself**: Chrome, Edge, Firefox, Brave, Vivaldi, Opera, and any other
   browser registered with Windows, with their icons.
 - **A small, fast picker** that opens next to the mouse: press `1`–`9`, or `Enter` for your
-  default choice, or `Esc` to cancel.
+  main browser, or `Esc` to cancel.
 - **Site rules**: "Always open github.com this way" sends that site (and its subdomains) straight to
   a browser, without asking.
 - **Profiles and private windows**: each Chrome/Edge/Brave/Vivaldi profile and each Firefox profile
@@ -46,6 +48,17 @@ Windows doesn't let apps make themselves the default browser, so this takes two 
 To stop using it, choose another default browser in Default apps, then click **Unregister**.
 From a script: `BrowserSelector.exe --register` and `BrowserSelector.exe --unregister`.
 
+## Ask, or open in your main browser
+
+**Settings → General → When you open a link** has two choices:
+
+- **Ask me every time**: every link shows the picker. `Enter` opens your main browser.
+- **Open it in my main browser**: links open straight away in the main browser you pick there,
+  except sites that have a rule. To choose anyway, **hold `Shift`** while you open the link
+  and the picker shows up.
+
+Site rules apply in both cases.
+
 <p align="center"><img src="docs/settings.png" width="70%" alt="Settings"></p>
 
 ## Using the picker
@@ -53,15 +66,14 @@ From a script: `BrowserSelector.exe --register` and `BrowserSelector.exe --unreg
 | Key | Action |
 | --- | --- |
 | `1` – `9` | Open with that browser or profile |
-| `Enter` | Open with the highlighted entry (it starts on your default choice; arrows move it) |
+| `Enter` | Open with the highlighted entry (it starts on your main browser; arrows move it) |
 | `Shift` + number, `Shift` + `Enter`, `Shift` + click | Open in a private window |
 | `Ctrl` + `C` | Copy the link |
 | `Esc` | Close without opening anything |
 
-Choose the entry that `Enter` opens in **Settings → General → Quick choice**. The **Try it** box there
-tests any link without changing anything in Windows: **Open picker** always asks, and
-**Open like a link** does what a real click would (follows your site rules, or asks) and tells you
-which rule matched.
+The **Try it** box under **Settings → General → Advanced options** tests any link without changing
+anything in Windows: **Open picker** always asks, and **Open like a link** does what a real click
+would (a site rule, your main browser, or the picker) and tells you which one it used.
 
 ## Site rules
 
@@ -70,7 +82,7 @@ Tick **Always open *site* this way** in the picker, or add a rule in **Settings 
 - A rule for `github.com` also covers `gist.github.com`; the most specific rule wins.
 - `www.` is ignored, so `www.youtube.com` and `youtube.com` are the same site.
 - A rule can open a profile, and can open a private window.
-- If a rule's browser is uninstalled, the picker shows up again.
+- If a rule's browser is uninstalled, the link is handled as if there were no rule.
 
 <p align="center"><img src="docs/rules.png" width="70%" alt="Site rules"></p>
 
@@ -83,7 +95,7 @@ Tick **Always open *site* this way** in the picker, or add a rule in **Settings 
 | Firefox, Firefox Developer Edition, LibreWolf, Waterfox, Floorp, Zen | `profiles.ini` | `-P` | `-private-window` |
 
 A browser with only one profile shows as a single entry. Turn profiles off in
-**Settings → General** to show one entry per browser.
+**Settings → General → Advanced options** to show one entry per browser.
 
 ## Settings file
 
