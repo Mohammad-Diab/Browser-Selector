@@ -76,8 +76,10 @@ namespace BrowserSelector
             int h = (int)Math.Ceiling(((UIElement)Content).DesiredSize.Height * scale);
             var work = info.rcWork;
             int margin = (int)(8 * scale);
-            int x = pt.X - (int)(30 * scale);
-            int y = pt.Y - (int)(20 * scale);
+            // Like a context menu: a corner at the mouse, opening away from it, so the mouse
+            // never rests on a button (the close button sits on the left in Arabic).
+            int x = Loc.IsArabic ? pt.X - w : pt.X;
+            int y = pt.Y;
             x = Math.Max(work.Left + margin, Math.Min(x, work.Right - w - margin));
             y = Math.Max(work.Top + margin, Math.Min(y, work.Bottom - h - margin));
             Native.SetWindowPos(hwnd, IntPtr.Zero, x, y, 0, 0, Native.SWP_NOSIZE | Native.SWP_NOZORDER | Native.SWP_NOACTIVATE);

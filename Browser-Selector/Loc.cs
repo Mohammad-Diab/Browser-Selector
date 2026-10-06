@@ -103,7 +103,7 @@ namespace BrowserSelector
             ["Picker.Close"] = "إغلاق (Esc)",
             ["Picker.Private"] = "نافذة خاصة",
             ["Picker.Remember"] = "افتح {0} هكذا دائماً",
-            ["Picker.Hint"] = "1–9 للاختيار · Enter الافتراضي · Shift خاص · Esc إلغاء",
+            ["Picker.Hint"] = "الأرقام للاختيار · Enter الافتراضي · Shift خاص · Esc إلغاء",
             ["Picker.Default"] = "Enter",
             ["Picker.NoBrowsers"] = "لم يُعثر على متصفحات. انسخ الرابط وافتحه بنفسك.",
             ["Picker.File"] = "ملف محلي",

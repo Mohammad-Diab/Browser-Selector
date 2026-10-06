@@ -8,9 +8,14 @@
     <Window.Resources>
         <DataTemplate x:Key="OptionTemplate" DataType="local:OptionItem">
             <StackPanel Orientation="Horizontal">
-                <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
+                <Image x:Name="Icon" Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,8,0" RenderOptions.BitmapScalingMode="HighQuality" />
                 <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
             </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Icon}" Value="{x:Null}">
+                    <Setter TargetName="Icon" Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
         </DataTemplate>
         <Style x:Key="Page" TargetType="ScrollViewer">
             <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
@@ -91,11 +96,24 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="1.3*" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox x:Name="RuleDomain" FlowDirection="LeftToRight" ToolTip="example.com" KeyDown="RuleDomain_KeyDown" />
+                            <TextBox x:Name="RuleDomain" FlowDirection="LeftToRight" KeyDown="RuleDomain_KeyDown" />
+                            <TextBlock Text="example.com" IsHitTestVisible="False" Foreground="{DynamicResource Muted}" Opacity="0.7"
+                                       FlowDirection="LeftToRight" Margin="11,0" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text, ElementName=RuleDomain}" Value="">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                             <ComboBox x:Name="RuleTarget" Grid.Column="1" Margin="8,0,0,0" ItemTemplate="{StaticResource OptionTemplate}" />
                             <CheckBox x:Name="RulePrivate" Grid.Column="2" Content="{local:Tr Rules.PrivateBox}" Margin="12,0,0,0" />
                             <Button Grid.Column="3" Style="{StaticResource AccentButton}" Content="{local:Tr Rules.Add}" Click="AddRule_Click" Margin="12,0,0,0" />
