@@ -59,6 +59,10 @@ english.ChooseDefault=Choose Browser Selector as my default browser now
 arabic.ChooseDefault=اختيار Browser Selector كمتصفحي الافتراضي الآن
 english.OpenSettings=Open Browser Selector settings
 arabic.OpenSettings=فتح إعدادات Browser Selector
+english.RegisterFailed=Browser Selector was installed, but registering it as a browser failed. Open Browser Selector from the Start menu and click Register.
+arabic.RegisterFailed=تم تثبيت Browser Selector، لكن فشل تسجيله كمتصفح. افتحه من قائمة Start واضغط "تسجيل".
+english.DeleteSettings=Also delete your Browser Selector settings and site rules?
+arabic.DeleteSettings=هل تريد حذف إعدادات Browser Selector وقواعد المواقع أيضاً؟
 
 [Files]
 Source: "{#SourceExe}"; DestDir: "{app}"; Flags: ignoreversion
@@ -68,16 +72,37 @@ Source: "..\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"
 Name: "{autoprograms}\Browser Selector"; Filename: "{app}\BrowserSelector.exe"; Comment: "Browser Selector settings"
 
 [Run]
-; Register as a browser for this user (HKCU), pointing at the installed copy.
-Filename: "{app}\BrowserSelector.exe"; Parameters: "--register"; Flags: runhidden waituntilterminated
+; (Registering as a browser happens in [Code], so a failure can be reported.)
 ; Windows lets only the user pick the default browser: open Default apps on our page.
 Filename: "ms-settings:defaultapps?registeredAppUser=Browser%20Selector"; Description: "{cm:ChooseDefault}"; Flags: postinstall shellexec nowait
 Filename: "{app}\BrowserSelector.exe"; Description: "{cm:OpenSettings}"; Flags: postinstall nowait unchecked
 
 [UninstallRun]
-; Remove every registry key the app added (Windows then falls back to another browser).
+; Remove the registry keys the app added, when they belong to this copy (Windows then falls back to another browser).
 Filename: "{app}\BrowserSelector.exe"; Parameters: "--unregister"; Flags: runhidden waituntilterminated; RunOnceId: "Unregister"
 
-[UninstallDelete]
-; Leave nothing behind: settings and site rules too.
-Type: filesandordirs; Name: "{userappdata}\BrowserSelector"
+[Code]
+// Register for this user (HKCU), pointing at the installed copy, and say so if it fails.
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+begin
+  if CurStep = ssPostInstall then
+    if not Exec(ExpandConstant('{app}\BrowserSelector.exe'), '--register', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
+       or (ResultCode <> 0) then
+      MsgBox(CustomMessage('RegisterFailed'), mbError, MB_OK);
+end;
+
+// Settings live in %APPDATA%, which a portable copy without its own settings.json shares: ask before deleting
+// them (a silent uninstall leaves nothing behind).
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  Dir: String;
+begin
+  if CurUninstallStep = usPostUninstall then
+  begin
+    Dir := ExpandConstant('{userappdata}\BrowserSelector');
+    if DirExists(Dir) and (UninstallSilent or (MsgBox(CustomMessage('DeleteSettings'), mbConfirmation, MB_YESNO) = IDYES)) then
+      DelTree(Dir, True, True, True);
+  end;
+end;
