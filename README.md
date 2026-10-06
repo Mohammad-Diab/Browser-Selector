@@ -35,8 +35,8 @@ Download from the [latest release](https://github.com/Mohammad-Diab/Browser-Sele
 | File | Use it when |
 | --- | --- |
 | `BrowserSelector-Setup-<version>.exe` | **Most people.** Installs for your user only (no admin), registers the app, adds a Start menu entry, and uninstalls cleanly from Apps & Features. |
-| `BrowserSelector-<version>-portable.7z` | You want a portable copy (a USB stick, say). Settings stay in the folder. |
-| `BrowserSelector.exe` | You just want the exe. Settings go to `%APPDATA%\BrowserSelector`. |
+| `BrowserSelector-<version>-portable.7z` | You'd rather not run an installer: the app, its license and short notes in a folder. |
+| `BrowserSelector.exe` | You just want the exe. |
 
 The files are not signed, so SmartScreen may warn you: choose **More info** → **Run anyway**.
 
@@ -113,9 +113,8 @@ A browser with only one profile shows as a single entry. Turn profiles off in
 
 ## Settings file
 
-Settings live in `%APPDATA%\BrowserSelector\settings.json`.
-For a portable copy (on a USB stick, say), put a `settings.json` next to the exe; `{}` is enough
-to start, and Browser Selector will keep its settings there.
+Settings and site rules live in `%APPDATA%\BrowserSelector\settings.json`, Windows' place for each user's
+app settings, whichever download you use. Nothing is written next to the exe.
 
 If the file can't be read (a typo after editing it by hand, say), Browser Selector moves it aside as
 `settings.json.bad-<date>-<time>`, tells you where it is, and starts from defaults. Your rules are still

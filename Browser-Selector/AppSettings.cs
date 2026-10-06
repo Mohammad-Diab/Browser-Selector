@@ -51,17 +51,12 @@ namespace BrowserSelector
         const string FileName = "settings.json";
 
         /// <summary>
-        /// %APPDATA%\BrowserSelector, or the app folder when a settings.json sits next to the exe (portable use).
+        /// %APPDATA%\BrowserSelector\settings.json: Windows' place for per-user app settings, for every copy
+        /// (installed or portable). Nothing is ever written next to the exe.
         /// </summary>
-        public static string FilePath
-        {
-            get
-            {
-                var local = Path.Combine(Path.GetDirectoryName(BrowserCatalog.SelfPath), FileName);
-                if (File.Exists(local)) return local;
-                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "BrowserSelector", FileName);
-            }
-        }
+        public static string FilePath =>
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "BrowserSelector", FileName);
+
 
         /// <summary>
         /// Reads the settings. A missing file gives defaults. A locked file is retried, then gives defaults marked
@@ -96,12 +91,7 @@ namespace BrowserSelector
             catch (FormatException)
             {
                 var aside = file + ".bad-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
-                try
-                {
-                    File.Move(file, aside);
-                    // A portable copy is portable because settings.json sits next to the exe: keep one there.
-                    if (Path.GetDirectoryName(file) == Path.GetDirectoryName(BrowserCatalog.SelfPath)) File.WriteAllText(file, "{}");
-                }
+                try { File.Move(file, aside); }
                 catch { return new AppSettings { Unreadable = true }; }
                 SetAsidePath = aside;
                 return new AppSettings();

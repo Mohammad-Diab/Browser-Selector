@@ -93,8 +93,8 @@ begin
       MsgBox(CustomMessage('RegisterFailed'), mbError, MB_OK);
 end;
 
-// Settings live in %APPDATA%, which a portable copy without its own settings.json shares: ask before deleting
-// them (a silent uninstall leaves nothing behind).
+// Settings live in %APPDATA%\BrowserSelector, which a portable copy shares: ask before deleting them
+// (a silent uninstall leaves nothing behind).
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   Dir: String;

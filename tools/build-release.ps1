@@ -1,7 +1,7 @@
 <#
   Builds the release files into .\release (or -OutDir):
     BrowserSelector.exe                         the app (portable, one file)
-    BrowserSelector-<version>-portable.7z       the app + settings.json kept next to it
+    BrowserSelector-<version>-portable.7z       the app in a folder, no installer
     BrowserSelector-Setup-<version>.exe         per-user installer (Inno Setup 6)
   The version comes from <InformationalVersion> in Browser-Selector.csproj.
   Needs: .NET SDK, 7-Zip, Inno Setup 6 (winget install JRSoftware.InnoSetup).
@@ -30,13 +30,12 @@ New-Item -ItemType Directory -Force $OutDir | Out-Null
 $OutDir = Resolve-Path $OutDir
 Copy-Item $exe $OutDir -Force
 
-# Portable: a folder with the exe, an empty settings.json (so settings stay in the folder), license and notes.
+# Portable: a folder with the exe, license and notes. Settings go to %APPDATA%\BrowserSelector like any copy.
 $stage = Join-Path ([IO.Path]::GetTempPath()) ("bs-portable-" + [Guid]::NewGuid().ToString("N"))
 $folder = Join-Path $stage "BrowserSelector"
 New-Item -ItemType Directory -Force $folder | Out-Null
 Copy-Item $exe $folder
 Copy-Item (Join-Path $root "LICENSE") (Join-Path $folder "LICENSE.txt")
-Set-Content (Join-Path $folder "settings.json") "{}" -NoNewline
 @"
 Browser Selector $version (portable)
 https://github.com/Mohammad-Diab/Browser-Selector
@@ -44,11 +43,10 @@ https://github.com/Mohammad-Diab/Browser-Selector
 1. Put this folder where it can stay: Windows remembers where the exe is when you register.
 2. Run BrowserSelector.exe, click Register, then choose Browser Selector in Windows Default apps.
 
-Settings and site rules are kept in settings.json in this folder. Delete that file to keep them
-in %APPDATA%\BrowserSelector instead.
+Settings and site rules are kept in %APPDATA%\BrowserSelector, never in this folder.
 
-To remove it: click Unregister in the settings (after choosing another default browser), then
-delete this folder.
+To remove it: choose another default browser, click Unregister in the settings, then delete this
+folder (and %APPDATA%\BrowserSelector if you don't want to keep your settings).
 "@ | Set-Content (Join-Path $folder "README.txt")
 $archive = Join-Path $OutDir "BrowserSelector-$version-portable.7z"
 if (Test-Path $archive) { [IO.File]::Delete($archive) }
