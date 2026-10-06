@@ -56,7 +56,8 @@ Windows doesn't let apps make themselves the default browser, so this takes two 
 
 To stop using it, choose another default browser in Default apps, then uninstall it from
 **Apps & Features** (Setup), or click **Unregister** and delete the folder (portable / exe).
-Uninstalling removes the registration and the settings.
+Uninstalling removes the registration, and asks whether to delete your settings and site rules too.
+`--unregister` only removes a registration that belongs to that copy (or to a copy that no longer exists).
 From a script: `BrowserSelector.exe --register` and `BrowserSelector.exe --unregister`.
 
 ## Ask, or open in your main browser
@@ -93,7 +94,9 @@ Tick **Always open *site* this way** in the picker, or add a rule in **Settings 
 - A rule for `github.com` also covers `gist.github.com`; the most specific rule wins.
 - `www.` is ignored, so `www.youtube.com` and `youtube.com` are the same site.
 - A rule can open a profile, and can open a private window.
-- If a rule's browser is uninstalled, the link is handled as if there were no rule.
+- If a rule's browser or profile can't be found (uninstalled, or the profile deleted), the picker
+  asks instead of guessing, and **Site rules** marks the rule. The same goes for the main browser.
+- Firefox profiles are saved by folder, so renaming a profile doesn't break its rules.
 
 <p align="center"><img src="docs/rules.png" width="70%" alt="Site rules"></p>
 
@@ -113,6 +116,16 @@ A browser with only one profile shows as a single entry. Turn profiles off in
 Settings live in `%APPDATA%\BrowserSelector\settings.json`.
 For a portable copy (on a USB stick, say), put a `settings.json` next to the exe; `{}` is enough
 to start, and Browser Selector will keep its settings there.
+
+If the file can't be read (a typo after editing it by hand, say), Browser Selector moves it aside as
+`settings.json.bad-<date>-<time>`, tells you where it is, and starts from defaults. Your rules are still
+in that file: fix it and rename it back.
+
+## What it opens
+
+Only web links (`http`, `https`) and local files. Anything else, such as `javascript:`, `data:`,
+other apps' links or files on network shares, is refused, so another program can't use
+Browser Selector to hand those to a browser.
 
 ## What it changes in Windows
 
