@@ -59,12 +59,6 @@
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="False" />
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Hover}" />
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Pressed}" />
-                            </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}" />
                             </Trigger>
@@ -75,6 +69,15 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <!-- Hover/pressed live in the style (not the template) so styles based on this one can override them. -->
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Hover}" />
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Pressed}" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
 
         <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
@@ -84,6 +87,11 @@
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Background" Value="{DynamicResource AccentHover}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentHover}" />
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource Accent}" />
+                    <Setter Property="Opacity" Value="0.85" />
                 </Trigger>
             </Style.Triggers>
         </Style>
